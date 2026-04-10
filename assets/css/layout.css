@@ -1,0 +1,128 @@
+/* sidebar, nav bar */
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-white);
+    border-right: 1px solid var(--border-color);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    transition: transform 0.3s ease; /* Hiệu ứng trượt mượt mà */
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-logo {
+    height: var(--navbar-height);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 20px 10px;
+}
+
+.sidebar-menu li {
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.sidebar-menu li:hover, .sidebar-menu li.active {
+    background-color: var(--primary-color);
+    color: var(--bg-white);
+}
+
+/* --- MAIN WRAPPER (Chứa Navbar & Content) --- */
+.main-wrapper {
+    flex: 1;
+    margin-left: var(--sidebar-width); /* Chừa chỗ cho Sidebar */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    transition: margin-left 0.3s ease;
+}
+
+/* --- NAVBAR --- */
+.navbar {
+    height: var(--navbar-height);
+    background-color: var(--bg-white);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+/* Nút Hamburger (Mặc định ẩn trên PC) */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+/* --- MAIN CONTENT --- */
+.content {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto; /* Cho phép cuộn nội dung */
+}
+
+/* Lớp phủ màn hình tối khi mở menu trên điện thoại */
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+/* --- RESPONSIVE MOBILE (Dưới 768px) --- */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%); /* Giấu sidebar sang trái */
+    }
+
+    .main-wrapper {
+        margin-left: 0; /* Nội dung chiếm toàn màn hình */
+    }
+
+    .menu-toggle {
+        display: block; /* Hiện nút bấm mở menu */
+    }
+
+    /* Lớp thêm vào khi bấm nút mở menu */
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .overlay.show {
+        display: block;
+    }
+}

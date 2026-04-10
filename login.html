@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Quản lý phòng</title>
+
+    <link rel="stylesheet" href="assets/css/variables.css">
+    <link rel="stylesheet" href="assets/css/pages/login.css">
+</head>
+<body class="login-page">
+
+    <div class="login-box">
+        <h2>Đăng nhập Hệ thống</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Nhập email của bạn" required>
+                <div class="error-message" id="emailError">Vui lòng nhập email hợp lệ.</div>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" placeholder="Nhập mật khẩu" required>
+                <div class="error-message" id="passwordError">Mật khẩu không được để trống.</div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="loginBtn">Đăng nhập</button>
+        </form>
+    </div>
+
+    <script src="assets/js/auth.js"></script>
+</body>
+</html>

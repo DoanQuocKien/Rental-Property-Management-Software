@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý phòng</title>
+
+    <link rel="stylesheet" href="assets/css/variables.css">
+    <link rel="stylesheet" href="assets/css/layout.css">
+</head>
+<body>
+
+    <div class="app-container">
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                🏢 Quản Lý Trọ
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active">🏠 Danh sách phòng</li>
+                <li>⚙️ Cài đặt hệ thống</li>
+                <li id="logoutBtn" style="color: #ef4444; margin-top: 20px;">🚪 Đăng xuất</li>
+            </ul>
+        </aside>
+
+        <div class="overlay" id="overlay"></div>
+
+        <div class="main-wrapper">
+
+            <header class="navbar">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <div class="user-info">
+                    <span>Xin chào, <strong>Chủ trọ</strong></span>
+                </div>
+            </header>
+
+            <main class="content">
+                <h2>Quản lý phòng (UC-07)</h2>
+                <p style="margin-top: 10px; color: var(--text-muted);">
+                    Bảng danh sách phòng và Form thêm/sửa phòng.
+                </p>
+                <div style="margin-top: 20px; padding: 20px; background: white; border-radius: 8px; border: 1px dashed #ccc; height: 400px; display: flex; justify-content: center; align-items: center; color: #999;">
+                    [ ... ]
+                </div>
+            </main>
+
+        </div>
+    </div>
+
+    <script src="assets/js/layout.js"></script>
+</body>
+</html>

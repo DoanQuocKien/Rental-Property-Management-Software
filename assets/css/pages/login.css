@@ -1,0 +1,92 @@
+
+/* Giao diện nền dành riêng cho trang đăng nhập */
+.login-page {
+    background-color: var(--bg-body);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Khung Form Đăng nhập */
+.login-box {
+    background-color: var(--bg-white);
+    padding: 40px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-box h2 {
+    text-align: center;
+    color: var(--text-main);
+    margin-bottom: 24px;
+}
+
+/* Các nhóm nhập liệu */
+.input-group {
+    margin-bottom: 16px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Nút Đăng nhập */
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: var(--bg-white);
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Dòng thông báo lỗi */
+.error-message {
+    color: #ef4444; /* Màu đỏ cảnh báo */
+    font-size: 13px;
+    margin-top: 5px;
+    display: none; /* Ẩn mặc định */
+}
+
+/* Tối ưu cho điện thoại */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 30px 20px;
+        box-shadow: none;
+        background-color: transparent;
+    }
+    .login-page {
+        background-color: var(--bg-white);
+    }
+}

@@ -1,0 +1,35 @@
+/* UI KIT*/
+
+:root {
+    /* Màu sắc chủ đạo (Màu xanh dương giống file Login) */
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+
+    /* Màu nền và màu chữ */
+    --bg-body: #f3f4f6;
+    --bg-white: #ffffff;
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+
+    /* Kích thước bố cục */
+    --sidebar-width: 260px;
+    --navbar-height: 64px;
+
+    /* Font chữ mặc định */
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Reset CSS cơ bản cho toàn dự án */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: var(--font-family);
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    overflow-x: hidden; /* Ngăn cuộn ngang */
+}

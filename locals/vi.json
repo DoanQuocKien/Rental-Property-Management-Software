@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Đăng nhập Hệ thống",
+    "email_label": "Email",
+    "email_placeholder": "Nhập email của bạn",
+    "password_label": "Mật khẩu",
+    "password_placeholder": "Nhập mật khẩu",
+    "btn_submit": "Đăng nhập",
+    "btn_processing": "Đang xử lý...",
+    "error_email": "Vui lòng nhập email hợp lệ.",
+    "error_password": "Mật khẩu không được để trống."
+  },
+  "layout": {
+    "sidebar_logo": "🏢 Quản Lý Trọ",
+    "menu_room_list": "🏠 Danh sách phòng",
+    "menu_settings": "⚙️ Cài đặt hệ thống",
+    "menu_logout": "🚪 Đăng xuất",
+    "nav_greeting": "Xin chào"
+  }
+}
