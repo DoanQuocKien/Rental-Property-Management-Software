@@ -897,3 +897,94 @@ body {
   border-bottom: 1px solid #f0f2f5;
   font-size: 0.9rem;
 }
+
+
+/* =========================================
+   TENANT UI ADDITIONS
+   Thêm vào cuối file index.css hiện có
+   ========================================= */
+
+/* Tenant sidebar accent color */
+.tenant-sidebar {
+  background: linear-gradient(180deg, #2d6a4f 0%, #1b4332 100%) !important;
+}
+
+/* Responsive grid adjustments */
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+
+  .sidebar-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .sidebar-nav li {
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .nav-label {
+    font-size: 0.7rem;
+  }
+}
+
+/* Modal improvements */
+.modal-overlay {
+  backdrop-filter: blur(4px);
+}
+
+/* Table responsive */
+@media (max-width: 768px) {
+  .rooms-table {
+    font-size: 0.8rem;
+  }
+  .rooms-table th,
+  .rooms-table td {
+    padding: 8px 6px;
+  }
+}
+
+/* Stat card hover effect */
+.stat-card-new {
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+.stat-card-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+/* Content card hover */
+.content-card {
+  transition: box-shadow 0.2s;
+}
+
+/* Progress bar animation */
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: var(--progress); }
+}
+
+/* Payment method button hover */
+button:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}

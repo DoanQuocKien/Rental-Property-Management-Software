@@ -13,7 +13,7 @@ import Invoices from './pages/Invoices';
 import Settings from './pages/Settings'; // Bạn tạo thêm file Settings.jsx nhé
 
 // Import trang cho Người thuê
-import TenantDashboard from './pages/TenantDashboard';
+import TenantDashboard from './pages/tenant/TenantDashboard';
 
 // Thành phần hỗ trợ
 import MainLayout from './components/layout/MainLayout';
