@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../api';
-import TenantLayout from '../components/layout/TenantLayout';
+import api from '../../api';
+import TenantLayout from '../../components/layout/TenantLayout';
 
 const STATUS_MAP = {
   paid: { label: 'Đã thanh toán', bg: '#e6fffa', color: '#38b2ac' },

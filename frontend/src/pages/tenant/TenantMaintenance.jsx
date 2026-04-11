@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../api';
-import TenantLayout from '../components/layout/TenantLayout';
+import api from '../../api';
+import TenantLayout from '../../components/layout/TenantLayout';
 
 const CATEGORIES = [
   { id: 'electrical', icon: '⚡', label: 'Điện' },

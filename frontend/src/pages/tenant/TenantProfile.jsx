@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../api';
-import TenantLayout from '../components/layout/TenantLayout';
+import api from '../../api';
+import TenantLayout from '../../components/layout/TenantLayout';
 
 export default function TenantProfile() {
   const [profile, setProfile] = useState(null);

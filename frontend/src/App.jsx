@@ -14,6 +14,10 @@ import Settings from './pages/Settings'; // Bạn tạo thêm file Settings.jsx 
 
 // Import trang cho Người thuê
 import TenantDashboard from './pages/tenant/TenantDashboard';
+import TenantInvoices from './pages/tenant/TenantInvoices';
+import TenantContract from './pages/tenant/TenantContract';
+import TenantMaintenance from './pages/tenant/TenantMaintenance';
+import TenantProfile from './pages/tenant/TenantProfile';
 
 // Thành phần hỗ trợ
 import MainLayout from './components/layout/MainLayout';
@@ -66,6 +70,26 @@ function App() {
       <Route path="/tenant" element={
         <ProtectedRoute role="tenant">
           <TenantDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/tenant/invoices" element={
+        <ProtectedRoute role="tenant">
+          <TenantInvoices />
+        </ProtectedRoute>
+      } />
+      <Route path="/tenant/contract" element={
+        <ProtectedRoute role="tenant">
+          <TenantContract />
+        </ProtectedRoute>
+      } />
+      <Route path="/tenant/maintenance" element={
+        <ProtectedRoute role="tenant">
+          <TenantMaintenance />
+        </ProtectedRoute>
+      } />
+      <Route path="/tenant/profile" element={
+        <ProtectedRoute role="tenant">
+          <TenantProfile />
         </ProtectedRoute>
       } />
 
