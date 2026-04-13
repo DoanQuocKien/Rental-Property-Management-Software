@@ -24,25 +24,39 @@ router.get('/available', authenticateToken, requireRole('landlord'), (req, res) 
 
 // US3: Get all rooms for a landlord
 router.get('/', authenticateToken, requireRole('landlord'), (req, res) => {
-  db.all(
-    `SELECT r.*, u.name as landlord_name
-     FROM rooms r
-     JOIN users u ON r.landlord_id = u.id
-     WHERE r.landlord_id = ?
-     ORDER BY r.created_at DESC`,
-    [req.user.id],
-    (err, rooms) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to fetch rooms' });
-      }
-      res.json({ rooms });
+  const { status, category } = req.query;
+
+  let query = `
+    SELECT r.*, u.name as landlord_name
+    FROM rooms r
+    JOIN users u ON r.landlord_id = u.id
+    WHERE r.landlord_id = ?
+  `;
+  const params = [req.user.id];
+
+  if (status) {
+    query += ` AND r.status = ?`;
+    params.push(status);
+  }
+
+  if (category) {
+    query += ` AND r.category = ?`;
+    params.push(category);
+  }
+
+  query += ` ORDER BY r.created_at DESC`;
+
+  db.all(query, params, (err, rooms) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to fetch rooms' });
     }
-  );
+    res.json({ rooms });
+  });
 });
 
 // US3: Add a room
 router.post('/', authenticateToken, requireRole('landlord'), (req, res) => {
-  const { name, description, price, area, status } = req.body;
+  const { name, description, price, area, status, category } = req.body;
 
   if (!name || price === undefined || price === null) {
     return res.status(400).json({ error: 'Room name and price are required' });
@@ -55,9 +69,9 @@ router.post('/', authenticateToken, requireRole('landlord'), (req, res) => {
   const roomStatus = ['available', 'occupied'].includes(status) ? status : 'available';
 
   db.run(
-    `INSERT INTO rooms (name, description, price, area, status, landlord_id)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [name, description || '', price, area || null, roomStatus, req.user.id],
+    `INSERT INTO rooms (name, description, price, area, status, category, landlord_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [name, description || '', price, area || null, roomStatus, category || null, req.user.id],
     function (err) {
       if (err) {
         return res.status(500).json({ error: 'Failed to add room' });
@@ -76,7 +90,7 @@ router.post('/', authenticateToken, requireRole('landlord'), (req, res) => {
 // US3: Update a room
 router.put('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
   const roomId = req.params.id;
-  const { name, description, price, area, status } = req.body;
+  const { name, description, price, area, status, category } = req.body;
 
   db.get(
     'SELECT * FROM rooms WHERE id = ? AND landlord_id = ?',
@@ -94,6 +108,7 @@ router.put('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
       const updatedPrice = price !== undefined ? price : room.price;
       const updatedArea = area !== undefined ? area : room.area;
       const updatedStatus = status !== undefined ? status : room.status;
+      const updatedCategory = category !== undefined ? category : room.category;
 
       if (!updatedName) {
         return res.status(400).json({ error: 'Room name cannot be empty' });
@@ -104,9 +119,9 @@ router.put('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
       }
 
       db.run(
-        `UPDATE rooms SET name = ?, description = ?, price = ?, area = ?, status = ?,
+        `UPDATE rooms SET name = ?, description = ?, price = ?, area = ?, status = ?, category = ?,
          updated_at = CURRENT_TIMESTAMP WHERE id = ? AND landlord_id = ?`,
-        [updatedName, updatedDescription, updatedPrice, updatedArea, updatedStatus, roomId, req.user.id],
+        [updatedName, updatedDescription, updatedPrice, updatedArea, updatedStatus, updatedCategory, roomId, req.user.id],
         function (err) {
           if (err) {
             return res.status(500).json({ error: 'Failed to update room' });

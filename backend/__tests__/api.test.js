@@ -140,6 +140,7 @@ describe('Rooms API', () => {
           description: 'A cozy room',
           price: 3000000,
           area: 25,
+          capacity: 2,
           status: 'available'
         });
       expect(res.statusCode).toBe(201);
@@ -151,7 +152,7 @@ describe('Rooms API', () => {
       const res = await request(app)
         .post('/api/rooms')
         .set('Authorization', `Bearer ${tenantToken}`)
-        .send({ name: 'Room X', price: 1000000 });
+        .send({ name: 'Room X', price: 1000000, area: 20, capacity: 2 });
       expect(res.statusCode).toBe(403);
     });
 
@@ -159,14 +160,14 @@ describe('Rooms API', () => {
       const res = await request(app)
         .post('/api/rooms')
         .set('Authorization', `Bearer ${landlordToken}`)
-        .send({ price: 1000000 });
+        .send({ price: 1000000, area: 20, capacity: 2 });
       expect(res.statusCode).toBe(400);
     });
 
     it('should reject unauthenticated request', async () => {
       const res = await request(app)
         .post('/api/rooms')
-        .send({ name: 'Room Z', price: 1000000 });
+        .send({ name: 'Room Z', price: 1000000, area: 20, capacity: 2 });
       expect(res.statusCode).toBe(401);
     });
   });
