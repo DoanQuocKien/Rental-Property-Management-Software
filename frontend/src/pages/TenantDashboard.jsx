@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 export default function TenantDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const displayName = user?.fullName || user?.name || '';
 
   const handleLogout = async () => {
     await logout();
@@ -16,7 +17,7 @@ export default function TenantDashboard() {
         <div className="header-content">
           <h1>🏠 Hệ thống quản lý nhà trọ</h1>
           <div className="header-user">
-            <span>Xin chào, <strong>{user?.name}</strong> (Người thuê)</span>
+            <span>Xin chào, <strong>{displayName}</strong> (Người thuê)</span>
             <button onClick={handleLogout} className="btn-logout">Đăng xuất</button>
           </div>
         </div>

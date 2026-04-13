@@ -4,7 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'tenant' });
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'tenant' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -22,6 +22,7 @@ export default function Register() {
     try {
       const res = await api.post('/auth/register', {
         ...form,
+        name: form.fullName,
         email: form.email.trim(),
       });
       login(res.data.user, res.data.token, res.data.refreshToken);
@@ -41,12 +42,12 @@ export default function Register() {
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="name">Họ và tên</label>
+            <label htmlFor="fullName">Họ và tên</label>
             <input
-              id="name"
+              id="fullName"
               type="text"
-              name="name"
-              value={form.name}
+              name="fullName"
+              value={form.fullName}
               onChange={handleChange}
               placeholder="Nhập họ và tên"
               required

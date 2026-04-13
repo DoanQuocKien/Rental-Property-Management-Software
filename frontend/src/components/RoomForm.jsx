@@ -6,7 +6,7 @@ export default function RoomForm({ room, onSubmit, onCancel }) {
     description: room?.description || '',
     price: room?.price || '',
     area: room?.area || '',
-    capacity: room?.capacity || '',
+    maxOccupants: room?.maxOccupants || room?.capacity || '',
     status: room?.status || 'available',
   });
   const [error, setError] = useState('');
@@ -26,7 +26,8 @@ export default function RoomForm({ room, onSubmit, onCancel }) {
         ...form,
         price: Number(form.price),
         area: Number(form.area),
-        capacity: Number(form.capacity),
+        maxOccupants: Number(form.maxOccupants),
+        capacity: Number(form.maxOccupants),
       });
     } catch (err) {
       setError(err.message || 'Thao tác thất bại');
@@ -98,8 +99,8 @@ export default function RoomForm({ room, onSubmit, onCancel }) {
               <input
                 id="room-capacity"
                 type="number"
-                name="capacity"
-                value={form.capacity}
+                name="maxOccupants"
+                value={form.maxOccupants}
                 onChange={handleChange}
                 placeholder="Ví dụ: 2"
                 min="1"

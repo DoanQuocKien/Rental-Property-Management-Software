@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -44,7 +46,13 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 
 if (require.main === module) {
-  assertAuthConfig();
+  try {
+    assertAuthConfig();
+  } catch (error) {
+    console.error(`${error.message}. Create backend/.env from backend/.env.example first.`);
+    process.exit(1);
+  }
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

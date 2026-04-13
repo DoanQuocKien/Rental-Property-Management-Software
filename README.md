@@ -1,45 +1,187 @@
-# Dự án Quản lý nhà trọ (Boarding House Management System)
+# Rental Property Management Software
 
-## 1. Tổng quan dự án (Project Overview)
-[cite_start]Dự án tập trung vào việc xây dựng một ứng dụng quản lý nhà trọ hiện đại, giải quyết các vấn đề về quản lý thông tin khách thuê, hợp đồng và tính toán hóa đơn tự động[cite: 111, 118, 123]. [cite_start]Dự án đóng vai trò như một Startup App với mục tiêu cung cấp giá trị nhanh chóng thông qua phiên bản MVP (Minimum Viable Product)[cite: 15].
+Ung dung quan ly nha tro gom backend (Node.js + Express + SQLite) va frontend (React + Vite).
 
-## 2. Quy trình phát triển (Software Development Process)
-* [cite_start]**Mô hình:** Agile / Scrum[cite: 11].
-* **Lý do lựa chọn:**
-    * [cite_start]Thích ứng nhanh với sự bất định của người dùng (High Uncertainty)[cite: 13].
-    * [cite_start]Tập trung vào các User Stories quan trọng nhất để tạo ra giá trị ngay lập tức[cite: 15].
-    * [cite_start]Cho phép lấy phản hồi liên tục để trình diễn và lấy ý kiến điều chỉnh[cite: 16].
+## Yeu cau moi truong
 
-## 3. Quy trình CI/CD (DevOps Pipeline)
-Hệ thống được thiết lập quy trình tự động hóa từ khâu viết code đến khi triển khai:
-1.  [cite_start]**Source Control:** Code được push lên Git repository (GitHub/GitLab)[cite: 98].
-2.  [cite_start]**Build:** Sử dụng Server CI/CD (GitHub Actions/Jenkins) để compile dự án và tạo container image[cite: 100, 101].
-3.  [cite_start]**Test:** Chạy Automated Tests (Unit Test, Integration Test)[cite: 83, 84, 103]. [cite_start]Nếu fail thì tạm ngưng, nếu pass thì tiếp tục Deploy[cite: 104, 105].
-4.  [cite_start]**Deploy:** Tự động triển khai lên Cloud/Server (Docker, K8s) sau khi test thành công[cite: 107, 108].
+- Node.js >= 18
+- npm >= 9
 
-## 4. Kế hoạch Sprint (Sprint Schedule)
-* [cite_start]**Độ dài mỗi Sprint:** 2 tuần[cite: 53].
-* [cite_start]**Vận tốc nhóm (Velocity):** Tầm 15 Story Points[cite: 54].
+## Cai dat va chay du an
 
-### [cite_start]Sprint 1 Backlog (Tổng: 14 Story Points) [cite: 66]
-| ID | Chức năng | User Story tóm tắt | Story Point |
-| :--- | :--- | :--- | :--- |
-| US1 | Đăng ký | [cite_start]Là người thuê, tôi muốn đăng ký tài khoản[cite: 39, 57]. | [cite_start]3 [cite: 60] |
-| US2 | Đăng nhập | [cite_start]Là người thuê, tôi muốn đăng nhập[cite: 40, 61]. | [cite_start]3 [cite: 62] |
-| US3 | Quản lý phòng | [cite_start]Là chủ trọ, tôi muốn quản lý thông tin phòng[cite: 41, 63]. | [cite_start]5 [cite: 64] |
-| US4 | Xem phòng trống | [cite_start]Là chủ trọ, tôi muốn xem danh sách phòng trống[cite: 42, 65]. | [cite_start]3 [cite: 65] |
+### 1. Cai dependencies
 
-## 5. Các tính năng cốt lõi (Core Features)
-Hệ thống được chia thành các Epic lớn để quản lý:
-* [cite_start]**Epic 1 - Quản lý phòng:** Thiết lập dãy trọ và bảng giá dịch vụ (điện, nước, wifi)[cite: 112, 114, 115].
-* [cite_start]**Epic 2 - Quản lý hợp đồng:** Tạo hợp đồng thuê, lưu trữ CCCD và tự động cảnh báo sắp hết hạn[cite: 117, 118, 121].
-* [cite_start]**Epic 3 - Thu chi & Báo cáo:** Tự động tính hóa đơn dựa trên chỉ số điện nước mới và xem biểu đồ doanh thu[cite: 122, 123, 126].
-* [cite_start]**Epic 4 - Quản lý sự cố:** Người thuê gửi phiếu báo hỏng (bóng đèn, ống nước) và chủ trọ cập nhật trạng thái sửa chữa[cite: 127, 128, 130].
+```bash
+npm install
+cd backend && npm install
+cd ../frontend && npm install
+```
 
-## 6. Chất lượng phần mềm (Quality Assurance)
-[cite_start]Dự án áp dụng các kịch bản kiểm thử (Test Cases) để đảm bảo tính chính xác[cite: 131]:
-* [cite_start]Kiểm tra tính logic hóa đơn (cảnh báo lỗi khi chỉ số mới nhỏ hơn chỉ số cũ)[cite: 133].
-* [cite_start]Kiểm tra tính pháp lý hợp đồng (tải ảnh CCCD, lỗi khi ngày kết thúc nhỏ hơn ngày bắt đầu)[cite: 138, 139].
+### 2. Cau hinh backend env
 
----
-[cite_start]*Dự án được thực hiện với sự hỗ trợ của AI để tự động hóa việc sinh Test case và phân tích yêu cầu chuyên sâu, giúp nâng cao chất lượng đồ án[cite: 143, 146].*
+Tao file `backend/.env` (co the copy tu `backend/.env.example`):
+
+```env
+PORT=5000
+JWT_SECRET=replace_with_a_long_random_secret
+JWT_REFRESH_SECRET=replace_with_another_long_random_secret
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+```
+
+Neu thieu `JWT_SECRET`, backend se khong khoi dong.
+
+### 3. Chay backend
+
+```bash
+cd backend
+npm start
+```
+
+### 4. Chay frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+## Kiem thu
+
+### Backend tests
+
+```bash
+cd backend
+npm test -- --runInBand
+```
+
+## Cau truc co so du lieu hien tai
+
+Database duoc tao/duy tri tai `backend/database.js` va mac dinh luu o `backend/rental.db`.
+
+### 1) users
+
+Luu thong tin nguoi dung va xac thuc.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
+| full_name | TEXT | Yes (default '') |  | Ho va ten |
+| phone_number | TEXT | Yes (default '') |  | So dien thoai |
+| name | TEXT | Yes |  | Truong tuong thich nguoc |
+| email | TEXT | Yes | UNIQUE | Email dang nhap |
+| password | TEXT | Yes |  | Mat khau da hash |
+| role | TEXT | Yes |  | Vai tro nguoi dung |
+| citizen_id | TEXT | No |  | CCCD |
+| permanent_address | TEXT | No |  | Dia chi thuong tru |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+
+### 2) rooms
+
+Quan ly thong tin phong.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
+| name | TEXT | Yes |  | Ten phong |
+| description | TEXT | No |  | Mo ta |
+| category | TEXT | Yes (default 'Standard') |  | Loai phong |
+| price | REAL | Yes |  | Gia thue |
+| area | REAL | No |  | Dien tich |
+| max_occupants | INTEGER | Yes (default 1) |  | Suc chua toi da |
+| status | TEXT | Yes (default 'available') |  | Trang thai phong |
+| landlord_id | INTEGER | Yes | FK -> users.id | Chu phong |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
+
+### 3) lease_contracts
+
+Luu hop dong thue.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
+| tenant_id | INTEGER | Yes | FK -> users.id | Nguoi thue |
+| room_id | INTEGER | Yes | FK -> rooms.id | Phong thue |
+| start_date | DATE | Yes |  | Ngay bat dau |
+| end_date | DATE | Yes |  | Ngay ket thuc |
+| deposit | REAL | Yes |  | Tien coc |
+| is_expired | INTEGER | Yes (default 0) |  | 0/1 het han |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
+
+### 4) meter_readings
+
+Luu chi so dien nuoc theo phong.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
+| room_id | INTEGER | Yes | FK -> rooms.id | Phong |
+| electricity_index | REAL | Yes |  | Chi so dien |
+| water_index | REAL | Yes |  | Chi so nuoc |
+| recorded_date | DATE | Yes |  | Ngay ghi nhan |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+
+### 5) invoices
+
+Luu hoa don thanh toan.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
+| room_id | INTEGER | Yes | FK -> rooms.id | Phong |
+| reading_id | INTEGER | No | FK -> meter_readings.id | Ban ghi chi so dien nuoc |
+| total_amount | REAL | Yes |  | Tong tien |
+| payment_status | TEXT | Yes (default 'Unpaid') |  | Trang thai thanh toan |
+| due_date | DATE | Yes |  | Han thanh toan |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
+
+### 6) maintenance_requests
+
+Luu yeu cau bao tri.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
+| tenant_id | INTEGER | Yes | FK -> users.id | Nguoi bao cao |
+| staff_id | INTEGER | No | FK -> users.id | Nhan vien ky thuat |
+| description | TEXT | Yes |  | Mo ta su co |
+| issue_photo | TEXT | No |  | Anh/URL minh hoa |
+| priority | TEXT | Yes (default 'Medium') |  | Muc uu tien |
+| status | TEXT | Yes (default 'Pending') |  | Trang thai xu ly |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
+
+### 7) refresh_tokens
+
+Luu refresh token dang hoat dong/phat sinh boi auth.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
+| user_id | INTEGER | Yes | FK -> users.id | Chu token |
+| token_hash | TEXT | Yes | UNIQUE | Hash SHA-256 cua refresh token |
+| jti | TEXT | Yes | UNIQUE | JWT ID |
+| expires_at | DATETIME | Yes |  | Han token |
+| revoked | INTEGER | Yes (default 0) |  | 0/1 da revoke |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+| revoked_at | DATETIME | No |  | Thoi gian revoke |
+| replaced_by_jti | TEXT | No |  | JTI moi sau rotate |
+| last_used_at | DATETIME | No |  | Lan su dung cuoi |
+
+### 8) revoked_access_tokens
+
+Blacklist access token da logout/revoke.
+
+| Column | Type | Not Null | Key | Mo ta |
+| --- | --- | --- | --- | --- |
+| jti | TEXT | Yes | PK | JWT ID cua access token |
+| user_id | INTEGER | Yes | FK -> users.id | Chu token |
+| expires_at | DATETIME | Yes |  | Han token |
+| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
+
+## Ghi chu tuong thich
+
+- He thong dang duoc thiet ke de tuong thich nguoc voi mot so key cu trong API response (vi du: `id`, `name`, `capacity`) trong khi da bo sung key moi (`userID`, `roomID`, `fullName`, `maxOccupants`).
+- Cac migration cot bo sung duoc xu ly tu dong trong `backend/database.js` bang `ensureColumn`.

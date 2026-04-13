@@ -43,6 +43,21 @@ function validateEmail(email) {
   return email.length <= 254 && EMAIL_REGEX.test(email);
 }
 
+function toPublicUser(user) {
+  const fullName = user.full_name || user.name || '';
+  return {
+    userID: user.id,
+    id: user.id,
+    name: user.name || fullName,
+    fullName,
+    phoneNumber: user.phone_number || '',
+    citizenID: user.citizen_id || null,
+    permanentAddress: user.permanent_address || null,
+    email: user.email,
+    role: user.role,
+  };
+}
+
 async function saveRefreshToken(userId, refreshToken, jti) {
   const tokenHash = hashToken(refreshToken);
   const expiresAt = buildExpiryDate(REFRESH_TOKEN_EXPIRES_IN_SECONDS);
@@ -60,7 +75,7 @@ function signAccessToken(user, jti) {
       id: user.id,
       email: user.email,
       role: user.role,
-      name: user.name,
+      name: user.name || user.fullName,
       jti,
       type: 'access',
     },
@@ -110,8 +125,8 @@ router.post('/register', async (req, res) => {
   }
 
   const { name, email, password, role, fullName, phoneNumber, citizenID, permanentAddress } = req.body;
-  const safeName = String(name || '').trim();
   const safeFullName = String(fullName || name || '').trim();
+  const safeName = safeFullName;
   const safePhoneNumber = String(phoneNumber || '').trim();
   const safeCitizenId = String(citizenID || '').trim();
   const safePermanentAddress = String(permanentAddress || '').trim();
@@ -166,6 +181,10 @@ router.post('/register', async (req, res) => {
     const user = {
       id: insertResult.lastID,
       name: safeName,
+      fullName: safeFullName,
+      phoneNumber: safePhoneNumber,
+      citizenID: safeCitizenId || null,
+      permanentAddress: safePermanentAddress || null,
       email: normalizedEmail,
       role: userRole,
     };
@@ -204,7 +223,12 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const user = await db.getAsync('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
+    const user = await db.getAsync(
+      `SELECT id, name, full_name, phone_number, citizen_id, permanent_address, email, password, role
+       FROM users
+       WHERE email = ?`,
+      [normalizedEmail]
+    );
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -215,12 +239,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const safeUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
+    const safeUser = toPublicUser(user);
 
     const { token, refreshToken } = await issueTokens(safeUser);
 
@@ -279,7 +298,9 @@ router.post('/refresh', async (req, res) => {
     }
 
     const user = await db.getAsync(
-      'SELECT id, name, email, role FROM users WHERE id = ?',
+      `SELECT id, name, full_name, phone_number, citizen_id, permanent_address, email, role
+       FROM users
+       WHERE id = ?`,
       [decoded.id]
     );
 
@@ -309,7 +330,7 @@ router.post('/refresh', async (req, res) => {
       message: 'Token refreshed successfully',
       token: newToken,
       refreshToken: newRefreshToken,
-      user,
+      user: toPublicUser(user),
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to refresh token' });
