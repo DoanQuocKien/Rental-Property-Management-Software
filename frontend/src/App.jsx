@@ -11,9 +11,14 @@ import Overview from './pages/Overview'; // Bạn tạo thêm file Overview.jsx 
 import Tenants from './pages/Tenants';
 import Invoices from './pages/Invoices';
 import Settings from './pages/Settings'; // Bạn tạo thêm file Settings.jsx nhé
+import Contract from './pages/Contract';
 
 // Import trang cho Người thuê
-import TenantDashboard from './pages/TenantDashboard';
+import TenantDashboard from './pages/tenant/TenantDashboard';
+import TenantInvoices from './pages/tenant/TenantInvoices';
+import TenantContract from './pages/tenant/TenantContract';
+import TenantMaintenance from './pages/tenant/TenantMaintenance';
+import TenantProfile from './pages/tenant/TenantProfile';
 
 // Thành phần hỗ trợ
 import MainLayout from './components/layout/MainLayout';
@@ -61,6 +66,11 @@ function App() {
           <MainLayout title="Cài đặt hệ thống"><Settings /></MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/contract" element={
+        <ProtectedRoute role="landlord">
+          <Contract />
+        </ProtectedRoute>
+      } />
 
       {/* 3. TUYẾN ĐƯỜNG NGƯỜI THUÊ */}
       <Route path="/tenant" element={
@@ -68,6 +78,27 @@ function App() {
           <TenantDashboard />
         </ProtectedRoute>
       } />
+      <Route path="/tenant/invoices" element={
+        <ProtectedRoute role="tenant">
+          <TenantInvoices />
+        </ProtectedRoute>
+      } />
+      <Route path="/tenant/contract" element={
+        <ProtectedRoute role="tenant">
+          <TenantContract />
+        </ProtectedRoute>
+      } />
+      <Route path="/tenant/maintenance" element={
+        <ProtectedRoute role="tenant">
+          <TenantMaintenance />
+        </ProtectedRoute>
+      } />
+      <Route path="/tenant/profile" element={
+        <ProtectedRoute role="tenant">
+          <TenantProfile />
+        </ProtectedRoute>
+      } />
+      
 
       {/* 4. ĐIỀU HƯỚNG MẶC ĐỊNH */}
       <Route path="/" element={<Navigate to="/login" replace />} />

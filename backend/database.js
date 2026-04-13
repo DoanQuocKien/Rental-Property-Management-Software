@@ -66,16 +66,24 @@ db.serialize(() => {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'tenant',
+      phone TEXT,
       citizen_id TEXT,
       permanent_address TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      date_of_birth TEXT,
+      gender TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
   ensureColumn('users', 'full_name', "TEXT NOT NULL DEFAULT ''");
   ensureColumn('users', 'phone_number', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn('users', 'phone', 'TEXT');
   ensureColumn('users', 'citizen_id', 'TEXT');
   ensureColumn('users', 'permanent_address', 'TEXT');
+  ensureColumn('users', 'date_of_birth', 'TEXT');
+  ensureColumn('users', 'gender', 'TEXT');
+  ensureColumn('users', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
 
   db.run(`
     CREATE TABLE IF NOT EXISTS rooms (
@@ -105,6 +113,8 @@ db.serialize(() => {
       start_date DATE NOT NULL,
       end_date DATE NOT NULL,
       deposit REAL NOT NULL,
+      rental_price REAL,
+      status TEXT DEFAULT 'active',
       is_expired INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -116,30 +126,52 @@ db.serialize(() => {
   db.run('CREATE INDEX IF NOT EXISTS idx_lease_contracts_tenant_id ON lease_contracts(tenant_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_lease_contracts_room_id ON lease_contracts(room_id)');
 
+  ensureColumn('lease_contracts', 'rental_price', 'REAL');
+  ensureColumn('lease_contracts', 'status', "TEXT DEFAULT 'active'");
+
   db.run(`
     CREATE TABLE IF NOT EXISTS meter_readings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER,
       room_id INTEGER NOT NULL,
-      electricity_index REAL NOT NULL,
-      water_index REAL NOT NULL,
+      electricity_index REAL NOT NULL DEFAULT 0,
+      water_index REAL NOT NULL DEFAULT 0,
+      prev_electricity_index REAL DEFAULT 0,
+      prev_water_index REAL DEFAULT 0,
       recorded_date DATE NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id),
       FOREIGN KEY (room_id) REFERENCES rooms(id)
     )
   `);
 
   db.run('CREATE INDEX IF NOT EXISTS idx_meter_readings_room_id ON meter_readings(room_id)');
 
+  ensureColumn('meter_readings', 'invoice_id', 'INTEGER');
+  ensureColumn('meter_readings', 'prev_electricity_index', 'REAL DEFAULT 0');
+  ensureColumn('meter_readings', 'prev_water_index', 'REAL DEFAULT 0');
+
   db.run(`
     CREATE TABLE IF NOT EXISTS invoices (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       room_id INTEGER NOT NULL,
       reading_id INTEGER,
+      contract_id INTEGER,
+      month INTEGER,
+      year INTEGER,
+      rent_amount REAL DEFAULT 0,
+      electricity_amount REAL DEFAULT 0,
+      water_amount REAL DEFAULT 0,
+      service_amount REAL DEFAULT 0,
       total_amount REAL NOT NULL,
       payment_status TEXT NOT NULL DEFAULT 'Unpaid',
+      status TEXT DEFAULT 'unpaid',
       due_date DATE NOT NULL,
+      payment_method TEXT,
+      paid_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (contract_id) REFERENCES lease_contracts(id),
       FOREIGN KEY (room_id) REFERENCES rooms(id),
       FOREIGN KEY (reading_id) REFERENCES meter_readings(id)
     )
@@ -148,15 +180,31 @@ db.serialize(() => {
   db.run('CREATE INDEX IF NOT EXISTS idx_invoices_room_id ON invoices(room_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_invoices_reading_id ON invoices(reading_id)');
 
+  ensureColumn('invoices', 'contract_id', 'INTEGER');
+  ensureColumn('invoices', 'month', 'INTEGER');
+  ensureColumn('invoices', 'year', 'INTEGER');
+  ensureColumn('invoices', 'rent_amount', 'REAL DEFAULT 0');
+  ensureColumn('invoices', 'electricity_amount', 'REAL DEFAULT 0');
+  ensureColumn('invoices', 'water_amount', 'REAL DEFAULT 0');
+  ensureColumn('invoices', 'service_amount', 'REAL DEFAULT 0');
+  ensureColumn('invoices', 'status', "TEXT DEFAULT 'unpaid'");
+  ensureColumn('invoices', 'payment_method', 'TEXT');
+  ensureColumn('invoices', 'paid_at', 'DATETIME');
+
   db.run(`
     CREATE TABLE IF NOT EXISTS maintenance_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contract_id INTEGER,
+      room_id INTEGER,
       tenant_id INTEGER NOT NULL,
-      staff_id INTEGER,
       description TEXT NOT NULL,
+      category TEXT DEFAULT 'general',
+      priority TEXT DEFAULT 'normal',
+      status TEXT DEFAULT 'pending',
+      assigned_to INTEGER,
+      resolution_note TEXT,
+      staff_id INTEGER,
       issue_photo TEXT,
-      priority TEXT NOT NULL DEFAULT 'Medium',
-      status TEXT NOT NULL DEFAULT 'Pending',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (tenant_id) REFERENCES users(id),
@@ -166,6 +214,13 @@ db.serialize(() => {
 
   db.run('CREATE INDEX IF NOT EXISTS idx_maintenance_requests_tenant_id ON maintenance_requests(tenant_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_maintenance_requests_staff_id ON maintenance_requests(staff_id)');
+
+  ensureColumn('maintenance_requests', 'contract_id', 'INTEGER');
+  ensureColumn('maintenance_requests', 'room_id', 'INTEGER');
+  ensureColumn('maintenance_requests', 'category', "TEXT DEFAULT 'general'");
+  ensureColumn('maintenance_requests', 'assigned_to', 'INTEGER');
+  ensureColumn('maintenance_requests', 'resolution_note', 'TEXT');
+  ensureColumn('maintenance_requests', 'issue_photo', 'TEXT');
 
   db.run(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
