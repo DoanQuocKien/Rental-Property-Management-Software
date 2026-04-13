@@ -25,12 +25,15 @@ db.serialize(() => {
       price REAL NOT NULL,
       area REAL,
       status TEXT NOT NULL DEFAULT 'available',
+      category TEXT,
       landlord_id INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (landlord_id) REFERENCES users(id)
     )
-  `);
+  `, () => {
+    db.run("ALTER TABLE rooms ADD COLUMN category TEXT", () => {});
+  });
 });
 
 module.exports = db;
