@@ -6,6 +6,7 @@ export default function RoomForm({ room, onSubmit, onCancel }) {
     description: room?.description || '',
     price: room?.price || '',
     area: room?.area || '',
+    capacity: room?.capacity || '',
     status: room?.status || 'available',
   });
   const [error, setError] = useState('');
@@ -24,7 +25,8 @@ export default function RoomForm({ room, onSubmit, onCancel }) {
       await onSubmit({
         ...form,
         price: Number(form.price),
-        area: form.area ? Number(form.area) : null,
+        area: Number(form.area),
+        capacity: Number(form.capacity),
       });
     } catch (err) {
       setError(err.message || 'Thao tác thất bại');
@@ -77,7 +79,7 @@ export default function RoomForm({ room, onSubmit, onCancel }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="room-area">Diện tích (m²)</label>
+              <label htmlFor="room-area">Diện tích (m²) *</label>
               <input
                 id="room-area"
                 type="number"
@@ -85,16 +87,32 @@ export default function RoomForm({ room, onSubmit, onCancel }) {
                 value={form.area}
                 onChange={handleChange}
                 placeholder="Ví dụ: 25"
-                min="0"
+                min="1"
+                required
               />
             </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="room-status">Trạng thái</label>
-            <select id="room-status" name="status" value={form.status} onChange={handleChange}>
-              <option value="available">Phòng trống</option>
-              <option value="occupied">Đã thuê</option>
-            </select>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="room-capacity">Sức chứa (người) *</label>
+              <input
+                id="room-capacity"
+                type="number"
+                name="capacity"
+                value={form.capacity}
+                onChange={handleChange}
+                placeholder="Ví dụ: 2"
+                min="1"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="room-status">Trạng thái</label>
+              <select id="room-status" name="status" value={form.status} onChange={handleChange}>
+                <option value="available">Phòng trống</option>
+                <option value="occupied">Đã thuê</option>
+              </select>
+            </div>
           </div>
           <div className="form-actions">
             <button type="button" onClick={onCancel} className="btn-secondary">

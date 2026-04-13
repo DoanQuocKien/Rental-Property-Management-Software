@@ -124,6 +124,7 @@ export default function LandlordDashboard() {
                   <th>Tên phòng</th>
                   <th>Trạng thái</th>
                   <th>Diện tích</th>
+                  <th>Sức chứa</th>
                   <th>Giá thuê</th>
                   <th>Thao tác</th>
                 </tr>
@@ -138,6 +139,7 @@ export default function LandlordDashboard() {
                       </span>
                     </td>
                     <td>{room.area} m²</td>
+                    <td>{room.capacity} người</td>
                     <td>{Number(room.price).toLocaleString('vi-VN')} đ</td>
                     <td>
                       <div className="action-btns">
