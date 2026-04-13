@@ -4,7 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'tenant' });
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'tenant' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -20,8 +20,12 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/register', form);
-      login(res.data.user, res.data.token);
+      const res = await api.post('/auth/register', {
+        ...form,
+        name: form.fullName,
+        email: form.email.trim(),
+      });
+      login(res.data.user, res.data.token, res.data.refreshToken);
       navigate(res.data.user.role === 'landlord' ? '/landlord' : '/tenant');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
@@ -38,12 +42,12 @@ export default function Register() {
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="name">Họ và tên</label>
+            <label htmlFor="fullName">Họ và tên</label>
             <input
-              id="name"
+              id="fullName"
               type="text"
-              name="name"
-              value={form.name}
+              name="fullName"
+              value={form.fullName}
               onChange={handleChange}
               placeholder="Nhập họ và tên"
               required
@@ -69,9 +73,10 @@ export default function Register() {
               name="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="Nhập mật khẩu (ít nhất 6 ký tự)"
+              placeholder="Mật khẩu 8-72 ký tự, gồm chữ và số"
               required
-              minLength={6}
+              minLength={8}
+              maxLength={72}
             />
           </div>
           <div className="form-group">
