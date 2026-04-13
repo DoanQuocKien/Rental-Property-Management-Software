@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
+const tenantRoutes = require('./routes/tenants');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/rooms', apiLimiter, roomRoutes);
+app.use('/api/tenants', apiLimiter, tenantRoutes); // THÊM MỚI
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
