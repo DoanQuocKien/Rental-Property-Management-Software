@@ -20,8 +20,11 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/login', form);
-      login(res.data.user, res.data.token);
+      const res = await api.post('/auth/login', {
+        ...form,
+        email: form.email.trim(),
+      });
+      login(res.data.user, res.data.token, res.data.refreshToken);
       navigate(res.data.user.role === 'landlord' ? '/landlord' : '/tenant');
     } catch (err) {
       setError(err.response?.data?.error || 'Đăng nhập thất bại. Vui lòng thử lại.');

@@ -5,6 +5,7 @@ const fs = require('fs');
 // Use a test database
 process.env.DB_PATH = path.join(__dirname, 'test.db');
 process.env.JWT_SECRET = 'test_secret';
+process.env.JWT_REFRESH_SECRET = 'test_refresh_secret';
 
 // Clean up test db before tests
 if (fs.existsSync(process.env.DB_PATH)) {
@@ -12,8 +13,10 @@ if (fs.existsSync(process.env.DB_PATH)) {
 }
 
 const app = require('../server');
+const db = require('../database');
 
-afterAll(() => {
+afterAll(async () => {
+  await db.closeAsync();
   if (fs.existsSync(process.env.DB_PATH)) {
     fs.unlinkSync(process.env.DB_PATH);
   }
@@ -31,6 +34,7 @@ describe('Authentication API', () => {
       });
       expect(res.statusCode).toBe(201);
       expect(res.body).toHaveProperty('token');
+      expect(res.body).toHaveProperty('refreshToken');
       expect(res.body.user.role).toBe('tenant');
     });
 
@@ -43,7 +47,19 @@ describe('Authentication API', () => {
       });
       expect(res.statusCode).toBe(201);
       expect(res.body).toHaveProperty('token');
+      expect(res.body).toHaveProperty('refreshToken');
       expect(res.body.user.role).toBe('landlord');
+    });
+
+    it('should normalize email before save', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        name: 'Normalize User',
+        email: 'Normalize@TEST.com ',
+        password: 'password123',
+        role: 'tenant'
+      });
+      expect(res.statusCode).toBe(201);
+      expect(res.body.user.email).toBe('normalize@test.com');
     });
 
     it('should reject duplicate email', async () => {
@@ -71,6 +87,24 @@ describe('Authentication API', () => {
       });
       expect(res.statusCode).toBe(400);
     });
+
+    it('should reject weak password without numbers or letters', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        name: 'Weak Pass',
+        email: 'weak@test.com',
+        password: 'abcdefgh'
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject invalid email format', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        name: 'Bad Email',
+        email: 'bad-email-format',
+        password: 'password123'
+      });
+      expect(res.statusCode).toBe(400);
+    });
   });
 
   // US2: Login
@@ -82,6 +116,16 @@ describe('Authentication API', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty('token');
+      expect(res.body).toHaveProperty('refreshToken');
+      expect(res.body.user.email).toBe('landlord@test.com');
+    });
+
+    it('should login with normalized email', async () => {
+      const res = await request(app).post('/api/auth/login').send({
+        email: ' LANDLORD@TEST.COM ',
+        password: 'password123'
+      });
+      expect(res.statusCode).toBe(200);
       expect(res.body.user.email).toBe('landlord@test.com');
     });
 
@@ -104,6 +148,87 @@ describe('Authentication API', () => {
     it('should reject missing credentials', async () => {
       const res = await request(app).post('/api/auth/login').send({});
       expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject invalid email format', async () => {
+      const res = await request(app).post('/api/auth/login').send({
+        email: 'not-an-email',
+        password: 'password123'
+      });
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  describe('POST /api/auth/refresh', () => {
+    it('should rotate refresh token and issue new access token', async () => {
+      const loginRes = await request(app).post('/api/auth/login').send({
+        email: 'tenant@test.com',
+        password: 'password123'
+      });
+      const oldRefreshToken = loginRes.body.refreshToken;
+
+      const refreshRes = await request(app).post('/api/auth/refresh').send({
+        refreshToken: oldRefreshToken
+      });
+
+      expect(refreshRes.statusCode).toBe(200);
+      expect(refreshRes.body).toHaveProperty('token');
+      expect(refreshRes.body).toHaveProperty('refreshToken');
+      expect(refreshRes.body.refreshToken).not.toBe(oldRefreshToken);
+
+      const oldTokenRes = await request(app).post('/api/auth/refresh').send({
+        refreshToken: oldRefreshToken
+      });
+      expect(oldTokenRes.statusCode).toBe(401);
+    });
+  });
+
+  describe('POST /api/auth/logout and /api/auth/revoke', () => {
+    it('should logout and revoke current access/refresh token pair', async () => {
+      const loginRes = await request(app).post('/api/auth/login').send({
+        email: 'landlord@test.com',
+        password: 'password123'
+      });
+
+      const accessToken = loginRes.body.token;
+      const refreshToken = loginRes.body.refreshToken;
+
+      const logoutRes = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ refreshToken });
+
+      expect(logoutRes.statusCode).toBe(200);
+
+      const protectedRes = await request(app)
+        .get('/api/rooms')
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect(protectedRes.statusCode).toBe(403);
+
+      const refreshRes = await request(app).post('/api/auth/refresh').send({ refreshToken });
+      expect(refreshRes.statusCode).toBe(401);
+    });
+
+    it('should revoke a refresh token explicitly', async () => {
+      const loginRes = await request(app).post('/api/auth/login').send({
+        email: 'tenant@test.com',
+        password: 'password123'
+      });
+
+      const accessToken = loginRes.body.token;
+      const refreshToken = loginRes.body.refreshToken;
+
+      const revokeRes = await request(app)
+        .post('/api/auth/revoke')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ refreshToken });
+
+      expect(revokeRes.statusCode).toBe(200);
+
+      const refreshRes = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken });
+      expect(refreshRes.statusCode).toBe(401);
     });
   });
 });
@@ -140,6 +265,7 @@ describe('Rooms API', () => {
           description: 'A cozy room',
           price: 3000000,
           area: 25,
+          capacity: 2,
           status: 'available'
         });
       expect(res.statusCode).toBe(201);
@@ -151,7 +277,7 @@ describe('Rooms API', () => {
       const res = await request(app)
         .post('/api/rooms')
         .set('Authorization', `Bearer ${tenantToken}`)
-        .send({ name: 'Room X', price: 1000000 });
+        .send({ name: 'Room X', price: 1000000, area: 20, capacity: 2 });
       expect(res.statusCode).toBe(403);
     });
 
@@ -159,14 +285,14 @@ describe('Rooms API', () => {
       const res = await request(app)
         .post('/api/rooms')
         .set('Authorization', `Bearer ${landlordToken}`)
-        .send({ price: 1000000 });
+        .send({ price: 1000000, area: 20, capacity: 2 });
       expect(res.statusCode).toBe(400);
     });
 
     it('should reject unauthenticated request', async () => {
       const res = await request(app)
         .post('/api/rooms')
-        .send({ name: 'Room Z', price: 1000000 });
+        .send({ name: 'Room Z', price: 1000000, area: 20, capacity: 2 });
       expect(res.statusCode).toBe(401);
     });
   });

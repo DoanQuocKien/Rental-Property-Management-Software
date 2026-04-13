@@ -25,9 +25,10 @@ export default function Navbar() {
   const dropdownRef = useRef(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const displayName = user?.fullName || user?.name || '';
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -208,11 +209,11 @@ export default function Navbar() {
         {/* User profile */}
         <div className="user-profile">
           <div className="user-info">
-            <span className="user-name">{user?.name}</span>
+            <span className="user-name">{displayName}</span>
             <span className="user-role">Chủ trọ</span>
           </div>
           <div className="user-avatar">
-            {user?.name?.charAt(0).toUpperCase()}
+            {displayName?.charAt(0).toUpperCase()}
           </div>
           <button onClick={handleLogout} className="btn-logout-mini">
             Đăng xuất

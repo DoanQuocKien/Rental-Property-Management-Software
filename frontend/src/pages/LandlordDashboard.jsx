@@ -33,7 +33,7 @@ export default function LandlordDashboard() {
   const handleFormSubmit = async (data) => {
     try {
       if (editingRoom) {
-        await api.put(`/rooms/${editingRoom.id}`, data);
+        await api.put(`/rooms/${editingRoom.roomID || editingRoom.id}`, data);
       } else {
         await api.post('/rooms', data);
       }
@@ -124,13 +124,14 @@ export default function LandlordDashboard() {
                   <th>Tên phòng</th>
                   <th>Trạng thái</th>
                   <th>Diện tích</th>
+                  <th>Sức chứa</th>
                   <th>Giá thuê</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {rooms.map((room) => (
-                  <tr key={room.id}>
+                  <tr key={room.roomID || room.id}>
                     <td className="font-bold">{room.name}</td>
                     <td>
                       <span className={`badge ${room.status}`}>
@@ -138,6 +139,7 @@ export default function LandlordDashboard() {
                       </span>
                     </td>
                     <td>{room.area} m²</td>
+                    <td>{room.maxOccupants || room.capacity || 1} người</td>
                     <td>{Number(room.price).toLocaleString('vi-VN')} đ</td>
                     <td>
                       <div className="action-btns">
@@ -148,7 +150,7 @@ export default function LandlordDashboard() {
                           Sửa
                         </button>
                         <button
-                          onClick={() => handleDeleteRoom(room.id)}
+                          onClick={() => handleDeleteRoom(room.roomID || room.id)}
                           className="delete-link"
                         >
                           Xóa
