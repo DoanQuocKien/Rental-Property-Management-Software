@@ -20,8 +20,11 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/register', form);
-      login(res.data.user, res.data.token);
+      const res = await api.post('/auth/register', {
+        ...form,
+        email: form.email.trim(),
+      });
+      login(res.data.user, res.data.token, res.data.refreshToken);
       navigate(res.data.user.role === 'landlord' ? '/landlord' : '/tenant');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
@@ -69,9 +72,10 @@ export default function Register() {
               name="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="Nhập mật khẩu (ít nhất 6 ký tự)"
+              placeholder="Mật khẩu 8-72 ký tự, gồm chữ và số"
               required
-              minLength={6}
+              minLength={8}
+              maxLength={72}
             />
           </div>
           <div className="form-group">

@@ -67,11 +67,12 @@ router.post('/', authenticateToken, requireRole('landlord'), (req, res) => {
   }
 
   const roomStatus = ['available', 'occupied'].includes(status) ? status : 'available';
+  const roomCategory = category && String(category).trim() ? String(category).trim() : 'Standard';
 
   db.run(
     `INSERT INTO rooms (name, description, price, area, status, category, landlord_id)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [name, description || '', price, area || null, roomStatus, category || null, req.user.id],
+    [name, description || '', price, area || null, roomStatus, roomCategory, req.user.id],
     function (err) {
       if (err) {
         return res.status(500).json({ error: 'Failed to add room' });
@@ -108,7 +109,9 @@ router.put('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
       const updatedPrice = price !== undefined ? price : room.price;
       const updatedArea = area !== undefined ? area : room.area;
       const updatedStatus = status !== undefined ? status : room.status;
-      const updatedCategory = category !== undefined ? category : room.category;
+      const updatedCategory = category !== undefined
+        ? (String(category).trim() || 'Standard')
+        : (room.category || 'Standard');
 
       if (!updatedName) {
         return res.status(400).json({ error: 'Room name cannot be empty' });

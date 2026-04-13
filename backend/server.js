@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { assertAuthConfig } = require('./config/auth');
 
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
 
 const app = express();
+const isTestEnv = process.env.NODE_ENV === 'test';
 
 app.use(cors());
 app.use(express.json());
@@ -16,6 +18,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
 });
 
 const apiLimiter = rateLimit({
@@ -24,6 +27,7 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
 });
 
 app.get('/api/health', (req, res) => {
@@ -40,6 +44,7 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 
 if (require.main === module) {
+  assertAuthConfig();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
