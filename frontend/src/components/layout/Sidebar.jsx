@@ -8,6 +8,7 @@ export default function Sidebar() {
     { path: '/rooms', icon: '🏠', label: 'Quản lý phòng' },
     { path: '/tenants', icon: '👥', label: 'Khách thuê' },
     { path: '/invoices', icon: '💰', label: 'Hóa đơn' },
+    { path: '/contract', icon: '📝', label: 'Tạo hợp đồng' },
     { path: '/settings', icon: '⚙️', label: 'Cài đặt' },
   ];
 

@@ -11,6 +11,7 @@ import Overview from './pages/Overview'; // Bạn tạo thêm file Overview.jsx 
 import Tenants from './pages/Tenants';
 import Invoices from './pages/Invoices';
 import Settings from './pages/Settings'; // Bạn tạo thêm file Settings.jsx nhé
+import Contract from './pages/Contract';
 
 // Import trang cho Người thuê
 import TenantDashboard from './pages/tenant/TenantDashboard';
@@ -65,6 +66,11 @@ function App() {
           <MainLayout title="Cài đặt hệ thống"><Settings /></MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/contract" element={
+        <ProtectedRoute role="landlord">
+          <Contract />
+        </ProtectedRoute>
+      } />
 
       {/* 3. TUYẾN ĐƯỜNG NGƯỜI THUÊ */}
       <Route path="/tenant" element={
@@ -92,6 +98,7 @@ function App() {
           <TenantProfile />
         </ProtectedRoute>
       } />
+      
 
       {/* 4. ĐIỀU HƯỚNG MẶC ĐỊNH */}
       <Route path="/" element={<Navigate to="/login" replace />} />

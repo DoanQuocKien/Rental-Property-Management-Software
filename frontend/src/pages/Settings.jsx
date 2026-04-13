@@ -1,29 +1,365 @@
-export default function Settings() {
+import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+
+const inputStyle = (disabled = false) => ({
+  width: '100%',
+  padding: '10px 12px',
+  border: `1px solid ${disabled ? '#f0f2f5' : '#ddd'}`,
+  borderRadius: '8px',
+  fontSize: '0.9rem',
+  outline: 'none',
+  fontFamily: 'inherit',
+  background: disabled ? '#f8fafc' : 'white',
+  color: disabled ? '#888' : '#333',
+  transition: 'border-color 0.2s',
+});
+
+function AccountTab({ user }) {
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    citizen_id: '',
+  });
+  const [success, setSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise(r => setTimeout(r, 800));
+    setSaving(false);
+    setSuccess('Đã lưu thông tin thành công!');
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
   return (
-    <div className="content-card" style={{ display: 'flex', padding: 0, minHeight: '400px' }}>
-      {/* Menu phụ bên trái của Settings */}
-      <div style={{ width: '200px', borderRight: '1px solid #eee', padding: '20px' }}>
-        <ul style={{ listStyle: 'none' }}>
-          <li style={{ padding: '10px', background: '#f0f4ff', color: '#667eea', borderRadius: '6px', fontWeight: 'bold', marginBottom: '5px', cursor: 'pointer' }}>👤 Tài khoản</li>
-          <li style={{ padding: '10px', color: '#555', cursor: 'pointer' }}>🏠 Thông tin khu trọ</li>
-          <li style={{ padding: '10px', color: '#555', cursor: 'pointer' }}>🔒 Bảo mật</li>
-        </ul>
+    <div>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>Thông tin tài khoản</h3>
+      {success && (
+        <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#276749', fontSize: '0.9rem' }}>
+          ✅ {success}
+        </div>
+      )}
+      <form onSubmit={handleSubmit}>
+        {/* Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '10px' }}>
+          <div style={{ width: '70px', height: '70px', background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '1.8rem', flexShrink: 0 }}>
+            {form.name?.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: '700', fontSize: '1rem', color: '#333' }}>{form.name}</div>
+            <div style={{ color: '#888', fontSize: '0.85rem' }}>{form.email}</div>
+            <div style={{ color: '#667eea', fontSize: '0.8rem', marginTop: '4px', fontWeight: '600' }}>Chủ trọ</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {[
+            { label: 'Họ và tên *', key: 'name', type: 'text', required: true },
+            { label: 'Email', key: 'email', type: 'email', disabled: true },
+            { label: 'Số điện thoại', key: 'phone', type: 'tel', placeholder: '0912 345 678' },
+            { label: 'Số CCCD/CMND', key: 'citizen_id', type: 'text', placeholder: '012345678901' },
+          ].map(field => (
+            <div key={field.key}>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>{field.label}</label>
+              <input
+                type={field.type}
+                value={form[field.key] || ''}
+                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                disabled={field.disabled}
+                required={field.required}
+                placeholder={field.placeholder || ''}
+                style={inputStyle(field.disabled)}
+              />
+            </div>
+          ))}
+        </div>
+
+        <button type="submit" disabled={saving} style={{ marginTop: '20px', padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+          {saving ? 'Đang lưu...' : '💾 Lưu thay đổi'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function PropertyTab() {
+  const [form, setForm] = useState({
+    property_name: '',
+    address: '',
+    total_floors: '',
+    total_rooms: '',
+    rules: '',
+    wifi_info: '',
+    parking: '',
+    deposit_months: '2',
+    notice_days: '30',
+  });
+  const [success, setSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise(r => setTimeout(r, 800));
+    setSaving(false);
+    setSuccess('Đã lưu thông tin khu trọ thành công!');
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  return (
+    <div>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>Thông tin khu trọ</h3>
+      {success && (
+        <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#276749', fontSize: '0.9rem' }}>
+          ✅ {success}
+        </div>
+      )}
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thông tin cơ bản</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Tên khu trọ *</label>
+              <input type="text" value={form.property_name} onChange={e => setForm(f => ({ ...f, property_name: e.target.value }))} placeholder="Ví dụ: Khu trọ Nguyễn Huệ" style={inputStyle()} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Địa chỉ</label>
+              <input type="text" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Đường ABC, Quận 1, TP.HCM" style={inputStyle()} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Số tầng</label>
+              <input type="number" value={form.total_floors} onChange={e => setForm(f => ({ ...f, total_floors: e.target.value }))} placeholder="3" min="1" style={inputStyle()} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Tổng số phòng</label>
+              <input type="number" value={form.total_rooms} onChange={e => setForm(f => ({ ...f, total_rooms: e.target.value }))} placeholder="20" min="1" style={inputStyle()} />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tiện ích & dịch vụ</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Thông tin WiFi</label>
+              <input type="text" value={form.wifi_info} onChange={e => setForm(f => ({ ...f, wifi_info: e.target.value }))} placeholder="Tên mạng / Mật khẩu" style={inputStyle()} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Chỗ để xe</label>
+              <select value={form.parking} onChange={e => setForm(f => ({ ...f, parking: e.target.value }))} style={inputStyle()}>
+                <option value="">Chọn loại...</option>
+                <option value="free">Miễn phí</option>
+                <option value="paid">Có tính phí</option>
+                <option value="none">Không có</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quy định & hợp đồng mặc định</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Đặt cọc mặc định (số tháng)</label>
+              <select value={form.deposit_months} onChange={e => setForm(f => ({ ...f, deposit_months: e.target.value }))} style={inputStyle()}>
+                <option value="1">1 tháng</option>
+                <option value="2">2 tháng</option>
+                <option value="3">3 tháng</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Thời gian báo trước khi trả phòng</label>
+              <select value={form.notice_days} onChange={e => setForm(f => ({ ...f, notice_days: e.target.value }))} style={inputStyle()}>
+                <option value="15">15 ngày</option>
+                <option value="30">30 ngày</option>
+                <option value="45">45 ngày</option>
+                <option value="60">60 ngày</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Nội quy khu trọ</label>
+            <textarea
+              value={form.rules}
+              onChange={e => setForm(f => ({ ...f, rules: e.target.value }))}
+              rows={5}
+              placeholder="Ví dụ:&#10;- Không tiếp khách quá 22:00&#10;- Không nuôi thú cưng&#10;- Không gây ồn ào sau 23:00&#10;- Giữ vệ sinh khu vực chung"
+              style={{ ...inputStyle(), resize: 'vertical' }}
+            />
+          </div>
+        </div>
+
+        <button type="submit" disabled={saving} style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+          {saving ? 'Đang lưu...' : '💾 Lưu thông tin khu trọ'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function SecurityTab() {
+  const [pwForm, setPwForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [twoFactor, setTwoFactor] = useState(false);
+  const [loginNotif, setLoginNotif] = useState(true);
+
+  const handleChangePassword = async e => {
+    e.preventDefault();
+    if (pwForm.new_password !== pwForm.confirm_password) { setPwError('Mật khẩu xác nhận không khớp'); return; }
+    if (pwForm.new_password.length < 6) { setPwError('Mật khẩu mới phải có ít nhất 6 ký tự'); return; }
+    setPwLoading(true); setPwError('');
+    await new Promise(r => setTimeout(r, 900));
+    setPwLoading(false);
+    setPwSuccess('Đổi mật khẩu thành công!');
+    setPwForm({ current_password: '', new_password: '', confirm_password: '' });
+    setTimeout(() => setPwSuccess(''), 3000);
+  };
+
+  const Toggle = ({ value, onChange }) => (
+    <div onClick={() => onChange(!value)} style={{ width: '44px', height: '24px', borderRadius: '12px', background: value ? '#667eea' : '#ddd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+      <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: value ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+    </div>
+  );
+
+  return (
+    <div>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>Bảo mật tài khoản</h3>
+
+      {/* Change password */}
+      <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', marginBottom: '24px' }}>
+        <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Đổi mật khẩu</div>
+        {pwSuccess && (
+          <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', color: '#276749', fontSize: '0.9rem' }}>✅ {pwSuccess}</div>
+        )}
+        {pwError && (
+          <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', color: '#742a2a', fontSize: '0.9rem' }}>⚠️ {pwError}</div>
+        )}
+        <form onSubmit={handleChangePassword}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px' }}>
+            {[
+              { label: 'Mật khẩu hiện tại', key: 'current_password' },
+              { label: 'Mật khẩu mới', key: 'new_password' },
+              { label: 'Xác nhận mật khẩu mới', key: 'confirm_password' },
+            ].map(field => (
+              <div key={field.key}>
+                <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>{field.label}</label>
+                <input
+                  type="password"
+                  value={pwForm[field.key]}
+                  onChange={e => setPwForm(f => ({ ...f, [field.key]: e.target.value }))}
+                  required
+                  placeholder="••••••••"
+                  style={inputStyle()}
+                />
+              </div>
+            ))}
+          </div>
+          <button type="submit" disabled={pwLoading} style={{ marginTop: '16px', padding: '10px 24px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: pwLoading ? 'not-allowed' : 'pointer', opacity: pwLoading ? 0.7 : 1 }}>
+            {pwLoading ? 'Đang xử lý...' : '🔑 Đổi mật khẩu'}
+          </button>
+        </form>
       </div>
 
-      {/* Nội dung bên phải */}
-      <div style={{ flex: 1, padding: '30px' }}>
-        <h3>Thông tin cá nhân</h3>
-        <div className="auth-form" style={{ marginTop: '20px', maxWidth: '400px' }}>
-          <div className="form-group" style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Tên chủ trọ</label>
-            <input type="text" defaultValue="Nguyễn Văn A" style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+      {/* Security settings */}
+      <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px' }}>
+        <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cài đặt bảo mật</div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid #e2e8f0' }}>
+          <div>
+            <div style={{ fontWeight: '600', color: '#333', fontSize: '0.9rem' }}>Xác thực hai yếu tố (2FA)</div>
+            <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '3px' }}>Tăng cường bảo mật bằng OTP qua điện thoại</div>
           </div>
-          <div className="form-group" style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email liên hệ</label>
-            <input type="email" defaultValue="admin@rental.com" style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-          </div>
-          <button className="btn-primary-gradient" style={{ padding: '10px 20px', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' }}>Lưu thay đổi</button>
+          <Toggle value={twoFactor} onChange={setTwoFactor} />
         </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0' }}>
+          <div>
+            <div style={{ fontWeight: '600', color: '#333', fontSize: '0.9rem' }}>Thông báo đăng nhập mới</div>
+            <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '3px' }}>Nhận thông báo khi có đăng nhập từ thiết bị mới</div>
+          </div>
+          <Toggle value={loginNotif} onChange={setLoginNotif} />
+        </div>
+
+        {twoFactor && (
+          <div style={{ background: '#f0f4ff', borderRadius: '8px', padding: '12px 14px', marginTop: '10px', color: '#667eea', fontSize: '0.85rem' }}>
+            📱 Xác thực hai yếu tố đã bật. Vui lòng liên kết ứng dụng xác thực (Google Authenticator) để hoàn tất thiết lập.
+          </div>
+        )}
+      </div>
+
+      {/* Sessions */}
+      <div style={{ background: '#fff5f5', borderRadius: '10px', padding: '20px', marginTop: '20px' }}>
+        <div style={{ fontWeight: '600', color: '#e53e3e', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vùng nguy hiểm</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontWeight: '600', color: '#333', fontSize: '0.9rem' }}>Đăng xuất tất cả thiết bị</div>
+            <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '3px' }}>Kết thúc tất cả phiên đăng nhập khác</div>
+          </div>
+          <button
+            onClick={() => alert('Đã đăng xuất tất cả thiết bị khác!')}
+            style={{ padding: '8px 16px', background: 'transparent', border: '1.5px solid #e53e3e', borderRadius: '8px', color: '#e53e3e', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}
+          >
+            Đăng xuất hết
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Settings() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('account');
+
+  const tabs = [
+    { id: 'account', icon: '👤', label: 'Tài khoản' },
+    { id: 'property', icon: '🏠', label: 'Thông tin khu trọ' },
+    { id: 'security', icon: '🔒', label: 'Bảo mật' },
+  ];
+
+  return (
+    <div className="content-card" style={{ display: 'flex', padding: 0, minHeight: '500px' }}>
+      {/* Sidebar tabs */}
+      <div style={{ width: '220px', borderRight: '1px solid #f0f2f5', padding: '20px 0', flexShrink: 0 }}>
+        <div style={{ padding: '0 16px 16px', fontSize: '0.75rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Cài đặt
+        </div>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              width: '100%',
+              padding: '12px 16px',
+              border: 'none',
+              background: activeTab === tab.id ? '#f0f4ff' : 'transparent',
+              color: activeTab === tab.id ? '#667eea' : '#555',
+              fontWeight: activeTab === tab.id ? '700' : '500',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              borderLeft: activeTab === tab.id ? '3px solid #667eea' : '3px solid transparent',
+              textAlign: 'left',
+              transition: 'all 0.15s',
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
+        {activeTab === 'account' && <AccountTab user={user} />}
+        {activeTab === 'property' && <PropertyTab />}
+        {activeTab === 'security' && <SecurityTab />}
       </div>
     </div>
   );
