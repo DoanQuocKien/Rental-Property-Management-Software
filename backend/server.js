@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { assertAuthConfig } = require('./config/auth');
 
 const authRoutes = require('./routes/auth');
+const contractRoutes = require('./routes/contracts');
 const roomRoutes = require('./routes/rooms');
 const tenantRoutes = require('./routes/tenants');
 
@@ -38,6 +39,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/contracts', apiLimiter, contractRoutes);
 app.use('/api/rooms', apiLimiter, roomRoutes);
 app.use('/api/tenants', apiLimiter, tenantRoutes); // THÊM MỚI
 
