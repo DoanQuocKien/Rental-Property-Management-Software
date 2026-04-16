@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
-import TenantLayout from '../../components/layout/TenantLayout';
 
 const CONTRACT_STATUS = {
   active: { label: '✅ Đang hoạt động', bg: '#e6fffa', color: '#38b2ac' },
@@ -9,23 +9,28 @@ const CONTRACT_STATUS = {
 };
 
 export default function TenantContract() {
+  const { user } = useAuth();
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Màu chủ đạo cho Người thuê
+  const tenantColor = '#2d6a4f';
+
   useEffect(() => {
-    const fetch = async () => {
+    const fetchContract = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/tenants/contract');
-        setContract(res.data.contract);
-      } catch {
-        setError('Không thể tải thông tin hợp đồng');
+        // ĐÃ SỬA: Gọi đúng API mà chúng ta đã thống nhất ở Backend
+        const res = await api.get('/contracts/my-contract');
+        setContract(res.data.data);
+      } catch (err) {
+        setError('Không thể tải thông tin hợp đồng. Có thể bạn chưa có hợp đồng chính thức.');
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchContract();
   }, []);
 
   const daysLeft = contract
@@ -39,22 +44,31 @@ export default function TenantContract() {
       )))
     : 0;
 
+  if (loading) return <div style={{ textAlign: 'center', padding: '60px' }}>⏳ Đang tải thông tin hợp đồng...</div>;
+
   return (
-    <TenantLayout title="Hợp đồng thuê phòng" subtitle="Xem thông tin hợp đồng hiện tại">
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#888' }}>Đang tải...</div>
-      ) : error ? (
-        <div className="error-message">{error}</div>
-      ) : !contract ? (
+    <div className="tenant-contract-container">
+      {/* 1. Tiêu đề (Bỏ TenantLayout) */}
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '1.6rem', color: '#2d3748' }}>Hợp đồng thuê phòng</h2>
+        <p style={{ color: '#718096' }}>Chi tiết các điều khoản và thời hạn thuê</p>
+      </div>
+
+      {!contract ? (
         <div className="content-card" style={{ textAlign: 'center', padding: '60px' }}>
           <div style={{ fontSize: '4rem', marginBottom: '16px' }}>📋</div>
-          <h3 style={{ color: '#555', marginBottom: '8px' }}>Chưa có hợp đồng nào</h3>
-          <p style={{ color: '#888' }}>Bạn hiện chưa có hợp đồng thuê phòng đang hoạt động. Vui lòng liên hệ chủ trọ.</p>
+          <h3 style={{ color: '#555' }}>Chưa có hợp đồng nào</h3>
+          <p style={{ color: '#888' }}>Liên hệ chủ trọ để cập nhật hợp đồng lên hệ thống.</p>
         </div>
       ) : (
         <>
-          {/* Header card */}
-          <div className="content-card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+          {/* Header card - Đổi sang màu Xanh Tenant */}
+          <div className="content-card" style={{
+            marginBottom: '20px',
+            background: `linear-gradient(135deg, ${tenantColor} 0%, #1b4332 100%)`,
+            color: 'white',
+            border: 'none'
+          }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontSize: '1.4rem', fontWeight: '700' }}>🏠 {contract.room_name}</div>
@@ -63,10 +77,7 @@ export default function TenantContract() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600'
-                }}>
+                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem' }}>
                   {daysLeft !== null && daysLeft > 0 ? `Còn ${daysLeft} ngày` : 'Đã hết hạn'}
                 </span>
               </div>
@@ -74,99 +85,52 @@ export default function TenantContract() {
 
             {/* Progress bar */}
             <div style={{ marginTop: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px', opacity: 0.85 }}>
-                <span>Bắt đầu: {new Date(contract.start_date).toLocaleDateString('vi-VN')}</span>
-                <span>Kết thúc: {new Date(contract.end_date).toLocaleDateString('vi-VN')}</span>
-              </div>
               <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '10px', height: '8px' }}>
-                <div style={{
-                  background: 'white', height: '8px', borderRadius: '10px',
-                  width: `${progressPercent}%`, transition: 'width 1s ease'
-                }} />
+                <div style={{ background: 'white', height: '8px', borderRadius: '10px', width: `${progressPercent}%` }} />
               </div>
-              <div style={{ textAlign: 'center', fontSize: '0.8rem', marginTop: '6px', opacity: 0.85 }}>
-                {progressPercent}% thời gian đã qua
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '8px', opacity: 0.85 }}>
+                <span>Bắt đầu: {new Date(contract.start_date).toLocaleDateString('vi-VN')}</span>
+                <span>{progressPercent}% thời gian</span>
+                <span>Kết thúc: {new Date(contract.end_date).toLocaleDateString('vi-VN')}</span>
               </div>
             </div>
           </div>
 
-          {/* Warning if expiring soon */}
-          {daysLeft !== null && daysLeft > 0 && daysLeft < 30 && (
-            <div style={{
-              background: '#fffbeb', border: '1px solid #f6e05e', borderLeft: '4px solid #d69e2e',
-              borderRadius: '8px', padding: '14px 18px', marginBottom: '20px', color: '#744210'
-            }}>
-              ⚠️ <strong>Hợp đồng sắp hết hạn!</strong> Còn {daysLeft} ngày. Vui lòng liên hệ chủ trọ để gia hạn hoặc làm thủ tục trả phòng.
-            </div>
-          )}
-
-          {/* Contract details */}
+          {/* Details */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div className="content-card">
-              <h3 style={{ marginBottom: '16px', color: '#333', fontSize: '0.95rem', fontWeight: '700' }}>
-                📄 Thông tin hợp đồng
-              </h3>
+              <h3 style={{ marginBottom: '16px', fontSize: '1rem' }}>📄 Chi tiết hợp đồng</h3>
               {[
-                { icon: '🏠', label: 'Tên phòng', value: contract.room_name },
-                { icon: '📐', label: 'Diện tích', value: contract.room_area ? `${contract.room_area} m²` : 'N/A' },
-                { icon: '💰', label: 'Giá thuê', value: `${Number(contract.rental_price).toLocaleString('vi-VN')}đ/tháng` },
-                { icon: '🔒', label: 'Tiền đặt cọc', value: `${Number(contract.deposit).toLocaleString('vi-VN')}đ` },
-                { icon: '📅', label: 'Ngày bắt đầu', value: new Date(contract.start_date).toLocaleDateString('vi-VN') },
-                { icon: '📅', label: 'Ngày kết thúc', value: new Date(contract.end_date).toLocaleDateString('vi-VN') },
-                {
-                  icon: '🟢', label: 'Trạng thái',
-                  value: <span style={{
-                    background: (CONTRACT_STATUS[contract.status] || CONTRACT_STATUS.active).bg,
-                    color: (CONTRACT_STATUS[contract.status] || CONTRACT_STATUS.active).color,
-                    padding: '3px 10px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: '600'
-                  }}>
-                    {(CONTRACT_STATUS[contract.status] || CONTRACT_STATUS.active).label}
-                  </span>
-                },
+                { label: 'Giá thuê', value: `${Number(contract.rental_price).toLocaleString()}đ/tháng` },
+                { label: 'Tiền cọc', value: `${Number(contract.deposit).toLocaleString()}đ` },
+                { label: 'Trạng thái', value: (CONTRACT_STATUS[contract.status] || CONTRACT_STATUS.active).label },
               ].map(item => (
-                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f0f2f5', fontSize: '0.9rem' }}>
-                  <span style={{ color: '#888' }}>{item.icon} {item.label}</span>
-                  <span style={{ fontWeight: '600', color: '#333' }}>{item.value}</span>
+                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f7fafc' }}>
+                  <span style={{ color: '#718096' }}>{item.label}</span>
+                  <span style={{ fontWeight: '600' }}>{item.value}</span>
                 </div>
               ))}
             </div>
 
             <div className="content-card">
-              <h3 style={{ marginBottom: '16px', color: '#333', fontSize: '0.95rem', fontWeight: '700' }}>
-                👤 Thông tin liên hệ
-              </h3>
-              <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{
-                  width: '60px', height: '60px', background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                  borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'white', fontWeight: '700', fontSize: '1.4rem', margin: '0 auto 12px'
-                }}>
-                  {contract.landlord_name?.charAt(0)}
+              <h3 style={{ marginBottom: '16px', fontSize: '1rem' }}>👤 Thông tin chủ trọ</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>👤</div>
+                <div>
+                  <div style={{ fontWeight: 'bold' }}>{contract.landlord_name}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#718096' }}>Chủ nhà / Quản lý</div>
                 </div>
-                <div style={{ fontWeight: '700', fontSize: '1rem', color: '#333' }}>{contract.landlord_name}</div>
-                <div style={{ color: '#888', fontSize: '0.85rem', marginTop: '4px' }}>Chủ trọ</div>
-                {contract.landlord_phone && (
-                  <a href={`tel:${contract.landlord_phone}`} style={{
-                    display: 'inline-block', marginTop: '14px', background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                    color: 'white', padding: '8px 20px', borderRadius: '20px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600'
-                  }}>
-                    📞 {contract.landlord_phone}
-                  </a>
-                )}
               </div>
-
-              <div style={{ marginTop: '20px', padding: '16px', background: '#f0f4ff', borderRadius: '10px', borderLeft: '4px solid #667eea' }}>
-                <div style={{ fontWeight: '600', color: '#667eea', marginBottom: '8px', fontSize: '0.9rem' }}>📌 Lưu ý quan trọng</div>
-                <ul style={{ listStyle: 'none', fontSize: '0.85rem', color: '#555', lineHeight: '1.8' }}>
-                  <li>• Thanh toán tiền thuê trước ngày 5 hàng tháng</li>
-                  <li>• Thông báo trước 30 ngày khi muốn chấm dứt HĐ</li>
-                  <li>• Giữ gìn vệ sinh và trật tự khu trọ</li>
-                </ul>
-              </div>
+              <a href={`tel:${contract.landlord_phone}`} style={{
+                display: 'block', textAlign: 'center', padding: '10px',
+                background: tenantColor, color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold'
+              }}>
+                📞 Gọi cho chủ trọ
+              </a>
             </div>
           </div>
         </>
       )}
-    </TenantLayout>
+    </div>
   );
 }

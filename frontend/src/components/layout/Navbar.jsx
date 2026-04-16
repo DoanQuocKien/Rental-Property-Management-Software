@@ -4,10 +4,8 @@ import { useNavigate } from 'react-router-dom';
 
 const MOCK_NOTIFICATIONS = [
   { id: 1, type: 'warning', icon: '⚠️', title: 'Hợp đồng sắp hết hạn', message: 'Phòng 105 — hết hạn trong 12 ngày', time: '5 phút trước', read: false },
-  { id: 2, type: 'error', icon: '🔧', title: 'Yêu cầu sửa chữa mới', message: 'Phòng 301 báo hỏng điều hòa (Ưu tiên cao)', time: '30 phút trước', read: false },
+  { id: 2, type: 'error', icon: '🔧', title: 'Yêu cầu sửa chữa mới', message: 'Phòng 301 báo hỏng điều hòa', time: '30 phút trước', read: false },
   { id: 3, type: 'success', icon: '💰', title: 'Thanh toán thành công', message: 'Phòng 202 đã thanh toán tiền tháng 4/2026', time: '2 giờ trước', read: false },
-  { id: 4, type: 'info', icon: '📋', title: 'Hợp đồng mới được tạo', message: 'Hợp đồng phòng 108 đã được ký kết', time: '1 ngày trước', read: true },
-  { id: 5, type: 'warning', icon: '💸', title: 'Hóa đơn chưa thanh toán', message: 'Phòng 204 quá hạn thanh toán 3 ngày', time: '2 ngày trước', read: true },
 ];
 
 const typeColors = {
@@ -25,23 +23,13 @@ export default function Navbar() {
   const dropdownRef = useRef(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
-  const displayName = user?.fullName || user?.name || '';
+  // Lấy tên hiển thị và Role từ user thật
+  const displayName = user?.fullName || user?.name || 'User';
+  const userRole = user?.role === 'landlord' ? 'Chủ trọ' : 'Người thuê';
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
-  };
-
-  const markAllRead = () => {
-    setNotifications(ns => ns.map(n => ({ ...n, read: true })));
-  };
-
-  const markRead = (id) => {
-    setNotifications(ns => ns.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const dismissNotification = (id) => {
-    setNotifications(ns => ns.filter(n => n.id !== id));
   };
 
   useEffect(() => {
@@ -57,164 +45,62 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-search">
-        <input type="text" placeholder="Tìm kiếm phòng, khách thuê..." />
+        <input type="text" placeholder="Tìm kiếm..." />
       </div>
-      <div className="navbar-actions">
 
+      <div className="navbar-actions">
         {/* Notification Bell */}
         <div ref={dropdownRef} style={{ position: 'relative' }}>
           <button
             onClick={() => setShowNotifications(v => !v)}
+            className="notif-btn"
             style={{
-              background: showNotifications ? '#f0f4ff' : 'transparent',
-              border: showNotifications ? '1px solid #c3dafe' : '1px solid transparent',
-              borderRadius: '10px',
-              padding: '8px 10px',
-              cursor: 'pointer',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-              fontSize: '18px',
+              background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', fontSize: '20px'
             }}
-            title="Thông báo"
           >
             🔔
-            {unreadCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '2px',
-                right: '2px',
-                background: '#e53e3e',
-                color: 'white',
-                borderRadius: '50%',
-                width: '18px',
-                height: '18px',
-                fontSize: '10px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid white',
-              }}>
-                {unreadCount}
-              </span>
-            )}
+            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
           </button>
 
-          {/* Dropdown */}
           {showNotifications && (
-            <div style={{
-              position: 'absolute',
-              top: 'calc(100% + 8px)',
-              right: 0,
-              width: '380px',
-              background: 'white',
-              borderRadius: '12px',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-              border: '1px solid #e2e8f0',
-              zIndex: 1000,
-              overflow: 'hidden',
+            <div className="notif-dropdown" style={{
+              position: 'absolute', top: '100%', right: 0, width: '320px', background: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)', borderRadius: '8px', zIndex: 100
             }}>
-              {/* Header */}
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#333' }}>
-                  🔔 Thông báo
-                  {unreadCount > 0 && (
-                    <span style={{ marginLeft: '8px', background: '#e53e3e', color: 'white', borderRadius: '10px', padding: '2px 7px', fontSize: '0.75rem', fontWeight: '700' }}>
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-                {unreadCount > 0 && (
-                  <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#667eea', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
-                    Đánh dấu đã đọc
-                  </button>
-                )}
-              </div>
-
-              {/* Notifications list */}
-              <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
-                {notifications.length === 0 ? (
-                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#aaa' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🔕</div>
-                    <p style={{ fontSize: '0.9rem' }}>Không có thông báo nào</p>
+              <div style={{ padding: '10px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Thông báo</div>
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {notifications.map(n => (
+                  <div key={n.id} style={{ padding: '10px', borderBottom: '1px solid #f9f9f9', fontSize: '0.85rem' }}>
+                    <strong>{n.title}</strong>
+                    <div style={{ color: '#666' }}>{n.message}</div>
                   </div>
-                ) : (
-                  notifications.map(notif => {
-                    const colors = typeColors[notif.type] || typeColors.info;
-                    return (
-                      <div
-                        key={notif.id}
-                        onClick={() => markRead(notif.id)}
-                        style={{
-                          padding: '12px 16px',
-                          borderBottom: '1px solid #f7f7f7',
-                          background: notif.read ? 'white' : colors.bg,
-                          cursor: 'pointer',
-                          transition: 'background 0.15s',
-                          position: 'relative',
-                          display: 'flex',
-                          gap: '12px',
-                          alignItems: 'flex-start',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                        onMouseLeave={e => e.currentTarget.style.background = notif.read ? 'white' : colors.bg}
-                      >
-                        {/* Unread dot */}
-                        {!notif.read && (
-                          <div style={{ position: 'absolute', top: '16px', right: '12px', width: '8px', height: '8px', borderRadius: '50%', background: colors.dot }} />
-                        )}
-
-                        <div style={{ fontSize: '20px', flexShrink: 0, lineHeight: 1.2 }}>{notif.icon}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: notif.read ? '500' : '700', fontSize: '0.88rem', color: '#333', marginBottom: '3px' }}>
-                            {notif.title}
-                          </div>
-                          <div style={{ fontSize: '0.82rem', color: '#666', lineHeight: '1.4', marginBottom: '6px' }}>
-                            {notif.message}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#aaa' }}>{notif.time}</div>
-                        </div>
-
-                        <button
-                          onClick={e => { e.stopPropagation(); dismissNotification(notif.id); }}
-                          style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '16px', padding: '0 4px', flexShrink: 0, lineHeight: 1 }}
-                          title="Xóa"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
+                ))}
               </div>
-
-              {/* Footer */}
-              {notifications.length > 0 && (
-                <div style={{ padding: '10px 16px', borderTop: '1px solid #f0f2f5', textAlign: 'center' }}>
-                  <button
-                    onClick={() => setNotifications([])}
-                    style={{ background: 'none', border: 'none', color: '#888', fontSize: '0.8rem', cursor: 'pointer' }}
-                  >
-                    Xóa tất cả thông báo
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
 
-        {/* User profile */}
-        <div className="user-profile">
-          <div className="user-info">
-            <span className="user-name">{displayName}</span>
-            <span className="user-role">Chủ trọ</span>
+        {/* User profile - Đã sửa lỗi Role và hiển thị */}
+        <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="user-info" style={{ textAlign: 'right' }}>
+            <span className="user-name" style={{ display: 'block', fontWeight: '600' }}>{displayName}</span>
+            <span className={`user-role-badge ${user?.role}`} style={{
+              fontSize: '0.75rem',
+              color: user?.role === 'landlord' ? '#667eea' : '#2d6a4f',
+              fontWeight: '700'
+            }}>
+              {userRole}
+            </span>
           </div>
-          <div className="user-avatar">
-            {displayName?.charAt(0).toUpperCase()}
+
+          <div className="user-avatar" style={{
+            background: user?.role === 'landlord' ? '#667eea' : '#2d6a4f',
+            color: 'white', width: '35px', height: '35px', borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'
+          }}>
+            {displayName.charAt(0).toUpperCase()}
           </div>
+
           <button onClick={handleLogout} className="btn-logout-mini">
             Đăng xuất
           </button>
