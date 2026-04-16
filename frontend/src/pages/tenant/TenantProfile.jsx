@@ -17,7 +17,6 @@ export default function TenantProfile() {
   const [pwSuccess, setPwSuccess] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
 
-  // Theme màu Xanh lá cho Tenant
   const tenantColor = '#2d6a4f';
 
   useEffect(() => {
@@ -83,7 +82,6 @@ export default function TenantProfile() {
 
   return (
     <div className="profile-container">
-      {/* 1. Tiêu đề */}
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.6rem', color: '#2d3748' }}>Hồ sơ cá nhân</h2>
         <p style={{ color: '#718096' }}>Quản lý thông tin và bảo mật tài khoản</p>
@@ -97,7 +95,7 @@ export default function TenantProfile() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px', alignItems: 'start' }}>
 
-        {/* CỘT TRÁI: THÔNG TIN TÓM TẮT */}
+        {/* CỘT TRÁI: AVATAR & STATUS */}
         <div className="content-card" style={{ textAlign: 'center' }}>
           <div style={{
             width: '100px', height: '100px', background: tenantColor, color: 'white',
@@ -122,10 +120,10 @@ export default function TenantProfile() {
           </button>
         </div>
 
-        {/* CỘT PHẢI: FORM CHI TIẾT */}
+        {/* CỘT PHẢI: CHI TIẾT */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-          {/* Form thông tin */}
+          {/* Form thông tin cơ bản */}
           <div className="content-card">
             <h4 style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>👤 Thông tin cơ bản</h4>
             <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -136,6 +134,15 @@ export default function TenantProfile() {
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Số điện thoại</label>
                 <input style={inputStyle(!editMode)} value={form.phone || ''} onChange={e => setForm({...form, phone: e.target.value})} disabled={!editMode} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Email</label>
+                <input style={inputStyle(true)} value={form.email || ''} disabled />
+              </div>
+              {/* --- ĐÃ THÊM LẠI CCCD Ở ĐÂY --- */}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Số CCCD/CMND</label>
+                <input style={inputStyle(!editMode)} value={form.citizen_id || ''} onChange={e => setForm({...form, citizen_id: e.target.value})} disabled={!editMode} placeholder="Chưa cập nhật" />
               </div>
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Địa chỉ thường trú</label>
@@ -150,7 +157,7 @@ export default function TenantProfile() {
             </form>
           </div>
 
-          {/* Form mật khẩu */}
+          {/* Form đổi mật khẩu */}
           <div className="content-card">
             <h4 style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>🔒 Bảo mật tài khoản</h4>
             <form onSubmit={handleChangePassword}>
