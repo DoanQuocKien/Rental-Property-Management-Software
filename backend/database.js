@@ -13,7 +13,17 @@ function ensureColumn(tableName, columnName, columnDef) {
 
     const exists = columns.some((column) => column.name === columnName);
     if (!exists) {
-      db.run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`);
+      // SQLite cannot ADD COLUMN with non-constant defaults like CURRENT_TIMESTAMP.
+      const hasNonConstantDefault = /\bDEFAULT\s+\(?\s*(CURRENT_(TIME|DATE|TIMESTAMP)|datetime\s*\()/i.test(columnDef);
+      const safeColumnDef = hasNonConstantDefault
+        ? columnDef.replace(/\s+DEFAULT\s+\(?\s*(CURRENT_(TIME|DATE|TIMESTAMP)|datetime\s*\([^)]*\))\s*\)?/i, '')
+        : columnDef;
+
+      db.run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${safeColumnDef}`, (alterErr) => {
+        if (alterErr) {
+          console.error(`Failed to add column ${tableName}.${columnName}: ${alterErr.message}`);
+        }
+      });
     }
   });
 }

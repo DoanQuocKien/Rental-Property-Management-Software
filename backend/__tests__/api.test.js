@@ -237,6 +237,7 @@ describe('Rooms API', () => {
   let landlordToken;
   let tenantToken;
   let roomId;
+  let contractRoomId;
 
   beforeAll(async () => {
     // Get landlord token
@@ -252,6 +253,19 @@ describe('Rooms API', () => {
       password: 'password123'
     });
     tenantToken = tenantRes.body.token;
+
+    const contractRoomRes = await request(app)
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${landlordToken}`)
+      .send({
+        name: 'Contract Room 201',
+        description: 'Room reserved for contract creation tests',
+        price: 4200000,
+        area: 30,
+        capacity: 2,
+        status: 'available'
+      });
+    contractRoomId = contractRoomRes.body.room.id;
   });
 
   // US3: Add room
@@ -360,6 +374,80 @@ describe('Rooms API', () => {
       expect(res.statusCode).toBe(200);
       const occupiedRooms = res.body.rooms.filter(r => r.id === roomId);
       expect(occupiedRooms.length).toBe(0);
+    });
+  });
+
+  describe('POST /api/contracts', () => {
+    it('should create a contract and update room status to occupied', async () => {
+      const res = await request(app)
+        .post('/api/contracts')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          roomID: contractRoomId,
+          tenantID: 1,
+          startDate: '2026-05-01',
+          endDate: '2027-05-01',
+          deposit: 3000000,
+          rentalPrice: 2500000
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data.roomID).toBe(contractRoomId);
+      expect(res.body.data.tenantID).toBe(1);
+
+      const roomRes = await request(app)
+        .get('/api/rooms')
+        .set('Authorization', `Bearer ${landlordToken}`);
+
+      const createdRoom = roomRes.body.rooms.find((room) => room.id === contractRoomId);
+      expect(createdRoom.status).toBe('occupied');
+    });
+
+    it('should reject creating a contract when the room is not available', async () => {
+      const res = await request(app)
+        .post('/api/contracts')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          roomID: contractRoomId,
+          tenantID: 1,
+          startDate: '2026-06-01',
+          endDate: '2027-06-01',
+          deposit: 3000000,
+          rentalPrice: 2500000
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.errorCode).toBe('ROOM_UNAVAILABLE');
+    });
+
+    it('should reject invalid tenant', async () => {
+      const availableRoomRes = await request(app)
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          name: 'Contract Room 202',
+          description: 'Room reserved for invalid tenant test',
+          price: 4300000,
+          area: 28,
+          capacity: 2,
+          status: 'available'
+        });
+
+      const res = await request(app)
+        .post('/api/contracts')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          roomID: availableRoomRes.body.room.id,
+          tenantID: 99999,
+          startDate: '2026-07-01',
+          endDate: '2027-07-01',
+          deposit: 3000000,
+          rentalPrice: 2500000
+        });
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.errorCode).toBe('TENANT_INVALID');
     });
   });
 
