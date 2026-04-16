@@ -17,6 +17,7 @@ export default function TenantProfile() {
   const [pwSuccess, setPwSuccess] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
 
+  // Theme màu Xanh lá cho Tenant
   const tenantColor = '#2d6a4f';
 
   useEffect(() => {
@@ -75,16 +76,17 @@ export default function TenantProfile() {
   const inputStyle = (disabled) => ({
     width: '100%', padding: '10px 12px', border: `1px solid ${disabled ? '#f0f2f5' : '#e2e8f0'}`,
     borderRadius: '8px', fontSize: '0.9rem', outline: 'none', background: disabled ? '#f8fafc' : 'white',
-    color: disabled ? '#888' : '#333'
+    color: disabled ? '#888' : '#333', transition: 'all 0.2s'
   });
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>⏳ Đang tải hồ sơ...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}>⏳ Đang tải hồ sơ...</div>;
 
   return (
     <div className="profile-container">
+      {/* 1. Header */}
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.6rem', color: '#2d3748' }}>Hồ sơ cá nhân</h2>
-        <p style={{ color: '#718096' }}>Quản lý thông tin và bảo mật tài khoản</p>
+        <p style={{ color: '#718096' }}>Quản lý thông tin định danh và bảo mật tài khoản</p>
       </div>
 
       {(success || pwSuccess) && (
@@ -95,7 +97,7 @@ export default function TenantProfile() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px', alignItems: 'start' }}>
 
-        {/* CỘT TRÁI: AVATAR & STATUS */}
+        {/* CỘT TRÁI: THÔNG TIN TÓM TẮT */}
         <div className="content-card" style={{ textAlign: 'center' }}>
           <div style={{
             width: '100px', height: '100px', background: tenantColor, color: 'white',
@@ -123,9 +125,9 @@ export default function TenantProfile() {
         {/* CỘT PHẢI: CHI TIẾT */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-          {/* Form thông tin cơ bản */}
+          {/* Form thông tin định danh */}
           <div className="content-card">
-            <h4 style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>👤 Thông tin cơ bản</h4>
+            <h4 style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>👤 Thông tin định danh</h4>
             <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Họ và tên</label>
@@ -139,14 +141,29 @@ export default function TenantProfile() {
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Email</label>
                 <input style={inputStyle(true)} value={form.email || ''} disabled />
               </div>
-              {/* --- ĐÃ THÊM LẠI CCCD Ở ĐÂY --- */}
+
+              {/* TRƯỜNG: CCCD */}
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Số CCCD/CMND</label>
                 <input style={inputStyle(!editMode)} value={form.citizen_id || ''} onChange={e => setForm({...form, citizen_id: e.target.value})} disabled={!editMode} placeholder="Chưa cập nhật" />
               </div>
+
+              {/* TRƯỜNG MỚI: NGÀY SINH */}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Ngày sinh</label>
+                <input
+                  type="date"
+                  style={inputStyle(!editMode)}
+                  value={form.date_of_birth || ''}
+                  onChange={e => setForm({...form, date_of_birth: e.target.value})}
+                  disabled={!editMode}
+                />
+              </div>
+
+              {/* TRƯỜNG: ĐỊA CHỈ THƯỜNG TRÚ */}
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Địa chỉ thường trú</label>
-                <input style={inputStyle(!editMode)} value={form.permanent_address || ''} onChange={e => setForm({...form, permanent_address: e.target.value})} disabled={!editMode} />
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Địa chỉ thường trú (ghi trên CCCD)</label>
+                <input style={inputStyle(!editMode)} value={form.permanent_address || ''} onChange={e => setForm({...form, permanent_address: e.target.value})} disabled={!editMode} placeholder="Nhập địa chỉ thường trú" />
               </div>
 
               {editMode && (
