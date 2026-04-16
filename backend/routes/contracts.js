@@ -141,4 +141,48 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   }
 });
 
+// 1. API lấy hợp đồng hiện tại của chính người thuê (Dành cho Tenant)
+router.get('/my-contract', authenticateToken, requireRole('tenant'), async (req, res) => {
+  try {
+    const contract = await db.getAsync(
+      `SELECT c.*, r.name as room_name, r.area, r.description as room_desc
+       FROM lease_contracts c
+       JOIN rooms r ON c.room_id = r.id
+       WHERE c.tenant_id = ? AND c.status = 'active' AND c.is_expired = 0
+       ORDER BY c.id DESC LIMIT 1`,
+      [req.user.id] // Lấy ID từ token đã đăng nhập
+    );
+
+    if (!contract) {
+      return res.status(404).json({ status: 'error', message: 'Bạn hiện chưa có hợp đồng nào.' });
+    }
+
+    res.json({ status: 'success', data: contract });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Lỗi server: ' + error.message });
+  }
+});
+
+// 2. API lấy chi tiết hợp đồng theo ID (Dành cho Chủ trọ quản lý)
+router.get('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const contract = await db.getAsync(
+      `SELECT c.*, r.name as room_name, u.name as tenant_name, u.phone as tenant_phone
+       FROM lease_contracts c
+       JOIN rooms r ON c.room_id = r.id
+       JOIN users u ON c.tenant_id = u.id
+       WHERE c.id = ?`,
+      [req.params.id]
+    );
+
+    if (!contract) {
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy hợp đồng.' });
+    }
+
+    res.json({ status: 'success', data: contract });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Lỗi server: ' + error.message });
+  }
+});
+
 module.exports = router;
