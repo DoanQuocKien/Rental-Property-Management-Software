@@ -55,6 +55,7 @@ function toPublicUser(user) {
     permanentAddress: user.permanent_address || null,
     email: user.email,
     role: user.role,
+    status: user.status,
   };
 }
 
@@ -161,11 +162,12 @@ router.post('/register', async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+    const initialStatus = (userRole === 'tenant' || userRole === 'Tenant') ? 'pending' : 'active';
 
     const insertResult = await db.runAsync(
       `INSERT INTO users
-       (name, full_name, phone_number, email, password, role, citizen_id, permanent_address)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (name, full_name, phone_number, email, password, role, citizen_id, permanent_address, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         safeName,
         safeFullName,
@@ -175,6 +177,7 @@ router.post('/register', async (req, res) => {
         userRole,
         safeCitizenId || null,
         safePermanentAddress || null,
+        initialStatus,
       ]
     );
 
@@ -187,7 +190,16 @@ router.post('/register', async (req, res) => {
       permanentAddress: safePermanentAddress || null,
       email: normalizedEmail,
       role: userRole,
+      status: initialStatus,
     };
+
+    if (initialStatus === 'pending') {
+      res.status(201).json({
+        message: 'Đăng ký thành công. Tài khoản đang chờ Chủ trọ phê duyệt.',
+        user,
+      });
+      return;
+    }
 
     const { token, refreshToken } = await issueTokens(user);
 
@@ -222,9 +234,9 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email format is invalid' });
   }
 
-  try {
+    try {
     const user = await db.getAsync(
-      `SELECT id, name, full_name, phone_number, citizen_id, permanent_address, email, password, role
+      `SELECT id, name, full_name, phone_number, citizen_id, permanent_address, email, password, role, status
        FROM users
        WHERE email = ?`,
       [normalizedEmail]
@@ -232,6 +244,14 @@ router.post('/login', async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (user.status === 'pending') {
+      return res.status(403).json({ error: 'Tài khoản của bạn đang chờ Chủ trọ phê duyệt.' });
+    }
+    
+    if (user.status === 'inactive') {
+      return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa.' });
     }
 
     const isValid = await bcrypt.compare(password, user.password);
@@ -298,7 +318,7 @@ router.post('/refresh', async (req, res) => {
     }
 
     const user = await db.getAsync(
-      `SELECT id, name, full_name, phone_number, citizen_id, permanent_address, email, role
+      `SELECT id, name, full_name, phone_number, citizen_id, permanent_address, email, role, status
        FROM users
        WHERE id = ?`,
       [decoded.id]
@@ -306,6 +326,10 @@ router.post('/refresh', async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
+    }
+    
+    if (user.status === 'pending' || user.status === 'inactive') {
+      return res.status(403).json({ error: 'Tài khoản bị khóa hoặc chưa được duyệt.' });
     }
 
     const newRefreshJti = crypto.randomUUID();

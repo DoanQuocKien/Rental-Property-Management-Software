@@ -14,20 +14,15 @@ const inputStyle = (disabled = false) => ({
   transition: 'border-color 0.2s',
 });
 
-function AccountTab({ user }) {
-  const [form, setForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '',
-    citizen_id: '',
-  });
+// ── Account Tab ───────────────────────────────────────────────────────────────
+function AccountTab({ form, onChange }) {
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 800));
     setSaving(false);
     setSuccess('Đã lưu thông tin thành công!');
     setTimeout(() => setSuccess(''), 3000);
@@ -35,12 +30,16 @@ function AccountTab({ user }) {
 
   return (
     <div>
-      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>Thông tin tài khoản</h3>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>
+        Thông tin tài khoản
+      </h3>
+
       {success && (
         <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#276749', fontSize: '0.9rem' }}>
           ✅ {success}
         </div>
       )}
+
       <form onSubmit={handleSubmit}>
         {/* Avatar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '10px' }}>
@@ -60,13 +59,15 @@ function AccountTab({ user }) {
             { label: 'Email', key: 'email', type: 'email', disabled: true },
             { label: 'Số điện thoại', key: 'phone', type: 'tel', placeholder: '0912 345 678' },
             { label: 'Số CCCD/CMND', key: 'citizen_id', type: 'text', placeholder: '012345678901' },
-          ].map(field => (
+          ].map((field) => (
             <div key={field.key}>
-              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>{field.label}</label>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>
+                {field.label}
+              </label>
               <input
                 type={field.type}
                 value={form[field.key] || ''}
-                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                onChange={(e) => onChange('account', field.key, e.target.value)}
                 disabled={field.disabled}
                 required={field.required}
                 placeholder={field.placeholder || ''}
@@ -76,7 +77,11 @@ function AccountTab({ user }) {
           ))}
         </div>
 
-        <button type="submit" disabled={saving} style={{ marginTop: '20px', padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{ marginTop: '20px', padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+        >
           {saving ? 'Đang lưu...' : '💾 Lưu thay đổi'}
         </button>
       </form>
@@ -84,71 +89,76 @@ function AccountTab({ user }) {
   );
 }
 
-function PropertyTab() {
-  const [form, setForm] = useState({
-    property_name: '',
-    address: '',
-    total_floors: '',
-    total_rooms: '',
-    rules: '',
-    wifi_info: '',
-    parking: '',
-    deposit_months: '2',
-    notice_days: '30',
-  });
+// ── Property Tab ──────────────────────────────────────────────────────────────
+function PropertyTab({ form, onChange }) {
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 800));
     setSaving(false);
     setSuccess('Đã lưu thông tin khu trọ thành công!');
     setTimeout(() => setSuccess(''), 3000);
   };
 
+  const field = (key) => ({
+    value: form[key] || '',
+    onChange: (e) => onChange('property', key, e.target.value),
+  });
+
   return (
     <div>
-      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>Thông tin khu trọ</h3>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>
+        Thông tin khu trọ
+      </h3>
+
       {success && (
         <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#276749', fontSize: '0.9rem' }}>
           ✅ {success}
         </div>
       )}
+
       <form onSubmit={handleSubmit}>
+        {/* Basic info */}
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thông tin cơ bản</div>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Thông tin cơ bản
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Tên khu trọ *</label>
-              <input type="text" value={form.property_name} onChange={e => setForm(f => ({ ...f, property_name: e.target.value }))} placeholder="Ví dụ: Khu trọ Nguyễn Huệ" style={inputStyle()} />
+              <input type="text" {...field('property_name')} placeholder="Ví dụ: Khu trọ Nguyễn Huệ" style={inputStyle()} />
             </div>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Địa chỉ</label>
-              <input type="text" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Đường ABC, Quận 1, TP.HCM" style={inputStyle()} />
+              <input type="text" {...field('address')} placeholder="123 Đường ABC, Quận 1, TP.HCM" style={inputStyle()} />
             </div>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Số tầng</label>
-              <input type="number" value={form.total_floors} onChange={e => setForm(f => ({ ...f, total_floors: e.target.value }))} placeholder="3" min="1" style={inputStyle()} />
+              <input type="number" {...field('total_floors')} placeholder="3" min="1" style={inputStyle()} />
             </div>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Tổng số phòng</label>
-              <input type="number" value={form.total_rooms} onChange={e => setForm(f => ({ ...f, total_rooms: e.target.value }))} placeholder="20" min="1" style={inputStyle()} />
+              <input type="number" {...field('total_rooms')} placeholder="20" min="1" style={inputStyle()} />
             </div>
           </div>
         </div>
 
+        {/* Amenities */}
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tiện ích & dịch vụ</div>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Tiện ích & dịch vụ
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Thông tin WiFi</label>
-              <input type="text" value={form.wifi_info} onChange={e => setForm(f => ({ ...f, wifi_info: e.target.value }))} placeholder="Tên mạng / Mật khẩu" style={inputStyle()} />
+              <input type="text" {...field('wifi_info')} placeholder="Tên mạng / Mật khẩu" style={inputStyle()} />
             </div>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Chỗ để xe</label>
-              <select value={form.parking} onChange={e => setForm(f => ({ ...f, parking: e.target.value }))} style={inputStyle()}>
+              <select {...field('parking')} style={inputStyle()}>
                 <option value="">Chọn loại...</option>
                 <option value="free">Miễn phí</option>
                 <option value="paid">Có tính phí</option>
@@ -158,12 +168,15 @@ function PropertyTab() {
           </div>
         </div>
 
+        {/* Contract defaults */}
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quy định & hợp đồng mặc định</div>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Quy định & hợp đồng mặc định
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '14px' }}>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Đặt cọc mặc định (số tháng)</label>
-              <select value={form.deposit_months} onChange={e => setForm(f => ({ ...f, deposit_months: e.target.value }))} style={inputStyle()}>
+              <select {...field('deposit_months')} style={inputStyle()}>
                 <option value="1">1 tháng</option>
                 <option value="2">2 tháng</option>
                 <option value="3">3 tháng</option>
@@ -171,7 +184,7 @@ function PropertyTab() {
             </div>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Thời gian báo trước khi trả phòng</label>
-              <select value={form.notice_days} onChange={e => setForm(f => ({ ...f, notice_days: e.target.value }))} style={inputStyle()}>
+              <select {...field('notice_days')} style={inputStyle()}>
                 <option value="15">15 ngày</option>
                 <option value="30">30 ngày</option>
                 <option value="45">45 ngày</option>
@@ -182,16 +195,19 @@ function PropertyTab() {
           <div>
             <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Nội quy khu trọ</label>
             <textarea
-              value={form.rules}
-              onChange={e => setForm(f => ({ ...f, rules: e.target.value }))}
+              {...field('rules')}
               rows={5}
-              placeholder="Ví dụ:&#10;- Không tiếp khách quá 22:00&#10;- Không nuôi thú cưng&#10;- Không gây ồn ào sau 23:00&#10;- Giữ vệ sinh khu vực chung"
+              placeholder={'Ví dụ:\n- Không tiếp khách quá 22:00\n- Không nuôi thú cưng\n- Không gây ồn ào sau 23:00\n- Giữ vệ sinh khu vực chung'}
               style={{ ...inputStyle(), resize: 'vertical' }}
             />
           </div>
         </div>
 
-        <button type="submit" disabled={saving} style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+        >
           {saving ? 'Đang lưu...' : '💾 Lưu thông tin khu trọ'}
         </button>
       </form>
@@ -199,44 +215,61 @@ function PropertyTab() {
   );
 }
 
-function SecurityTab() {
+// ── Security Tab ──────────────────────────────────────────────────────────────
+function SecurityTab({ form, onChange }) {
   const [pwForm, setPwForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
-  const [loginNotif, setLoginNotif] = useState(true);
 
-  const handleChangePassword = async e => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (pwForm.new_password !== pwForm.confirm_password) { setPwError('Mật khẩu xác nhận không khớp'); return; }
-    if (pwForm.new_password.length < 6) { setPwError('Mật khẩu mới phải có ít nhất 6 ký tự'); return; }
-    setPwLoading(true); setPwError('');
-    await new Promise(r => setTimeout(r, 900));
+    if (pwForm.new_password !== pwForm.confirm_password) {
+      setPwError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+    if (pwForm.new_password.length < 6) {
+      setPwError('Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+    setPwLoading(true);
+    setPwError('');
+    await new Promise((r) => setTimeout(r, 900));
     setPwLoading(false);
     setPwSuccess('Đổi mật khẩu thành công!');
     setPwForm({ current_password: '', new_password: '', confirm_password: '' });
     setTimeout(() => setPwSuccess(''), 3000);
   };
 
-  const Toggle = ({ value, onChange }) => (
-    <div onClick={() => onChange(!value)} style={{ width: '44px', height: '24px', borderRadius: '12px', background: value ? '#667eea' : '#ddd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+  const Toggle = ({ value, onToggle }) => (
+    <div
+      onClick={onToggle}
+      style={{ width: '44px', height: '24px', borderRadius: '12px', background: value ? '#667eea' : '#ddd', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+    >
       <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: value ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
     </div>
   );
 
   return (
     <div>
-      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>Bảo mật tài khoản</h3>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>
+        Bảo mật tài khoản
+      </h3>
 
       {/* Change password */}
       <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', marginBottom: '24px' }}>
-        <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Đổi mật khẩu</div>
+        <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Đổi mật khẩu
+        </div>
         {pwSuccess && (
-          <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', color: '#276749', fontSize: '0.9rem' }}>✅ {pwSuccess}</div>
+          <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', color: '#276749', fontSize: '0.9rem' }}>
+            ✅ {pwSuccess}
+          </div>
         )}
         {pwError && (
-          <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', color: '#742a2a', fontSize: '0.9rem' }}>⚠️ {pwError}</div>
+          <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', color: '#742a2a', fontSize: '0.9rem' }}>
+            ⚠️ {pwError}
+          </div>
         )}
         <form onSubmit={handleChangePassword}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px' }}>
@@ -244,13 +277,15 @@ function SecurityTab() {
               { label: 'Mật khẩu hiện tại', key: 'current_password' },
               { label: 'Mật khẩu mới', key: 'new_password' },
               { label: 'Xác nhận mật khẩu mới', key: 'confirm_password' },
-            ].map(field => (
-              <div key={field.key}>
-                <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>{field.label}</label>
+            ].map((f) => (
+              <div key={f.key}>
+                <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>
+                  {f.label}
+                </label>
                 <input
                   type="password"
-                  value={pwForm[field.key]}
-                  onChange={e => setPwForm(f => ({ ...f, [field.key]: e.target.value }))}
+                  value={pwForm[f.key]}
+                  onChange={(e) => setPwForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                   required
                   placeholder="••••••••"
                   style={inputStyle()}
@@ -258,7 +293,11 @@ function SecurityTab() {
               </div>
             ))}
           </div>
-          <button type="submit" disabled={pwLoading} style={{ marginTop: '16px', padding: '10px 24px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: pwLoading ? 'not-allowed' : 'pointer', opacity: pwLoading ? 0.7 : 1 }}>
+          <button
+            type="submit"
+            disabled={pwLoading}
+            style={{ marginTop: '16px', padding: '10px 24px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: pwLoading ? 'not-allowed' : 'pointer', opacity: pwLoading ? 0.7 : 1 }}
+          >
             {pwLoading ? 'Đang xử lý...' : '🔑 Đổi mật khẩu'}
           </button>
         </form>
@@ -266,14 +305,19 @@ function SecurityTab() {
 
       {/* Security settings */}
       <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px' }}>
-        <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cài đặt bảo mật</div>
+        <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Cài đặt bảo mật
+        </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid #e2e8f0' }}>
           <div>
             <div style={{ fontWeight: '600', color: '#333', fontSize: '0.9rem' }}>Xác thực hai yếu tố (2FA)</div>
             <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '3px' }}>Tăng cường bảo mật bằng OTP qua điện thoại</div>
           </div>
-          <Toggle value={twoFactor} onChange={setTwoFactor} />
+          <Toggle
+            value={form.twoFactor}
+            onToggle={() => onChange('security', 'twoFactor', !form.twoFactor)}
+          />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0' }}>
@@ -281,19 +325,24 @@ function SecurityTab() {
             <div style={{ fontWeight: '600', color: '#333', fontSize: '0.9rem' }}>Thông báo đăng nhập mới</div>
             <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '3px' }}>Nhận thông báo khi có đăng nhập từ thiết bị mới</div>
           </div>
-          <Toggle value={loginNotif} onChange={setLoginNotif} />
+          <Toggle
+            value={form.loginNotif}
+            onToggle={() => onChange('security', 'loginNotif', !form.loginNotif)}
+          />
         </div>
 
-        {twoFactor && (
+        {form.twoFactor && (
           <div style={{ background: '#f0f4ff', borderRadius: '8px', padding: '12px 14px', marginTop: '10px', color: '#667eea', fontSize: '0.85rem' }}>
             📱 Xác thực hai yếu tố đã bật. Vui lòng liên kết ứng dụng xác thực (Google Authenticator) để hoàn tất thiết lập.
           </div>
         )}
       </div>
 
-      {/* Sessions */}
+      {/* Danger zone */}
       <div style={{ background: '#fff5f5', borderRadius: '10px', padding: '20px', marginTop: '20px' }}>
-        <div style={{ fontWeight: '600', color: '#e53e3e', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vùng nguy hiểm</div>
+        <div style={{ fontWeight: '600', color: '#e53e3e', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Vùng nguy hiểm
+        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontWeight: '600', color: '#333', fontSize: '0.9rem' }}>Đăng xuất tất cả thiết bị</div>
@@ -311,9 +360,42 @@ function SecurityTab() {
   );
 }
 
+// ── Main Settings ─────────────────────────────────────────────────────────────
 export default function Settings() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
+
+  // ── Lifted state for all tabs ──
+  const [accountForm, setAccountForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    citizen_id: '',
+  });
+
+  const [propertyForm, setPropertyForm] = useState({
+    property_name: '',
+    address: '',
+    total_floors: '',
+    total_rooms: '',
+    rules: '',
+    wifi_info: '',
+    parking: '',
+    deposit_months: '2',
+    notice_days: '30',
+  });
+
+  const [securityForm, setSecurityForm] = useState({
+    twoFactor: false,
+    loginNotif: true,
+  });
+
+  // Generic updater: onChange('account' | 'property' | 'security', key, value)
+  const handleChange = (section, key, value) => {
+    if (section === 'account') setAccountForm((f) => ({ ...f, [key]: value }));
+    else if (section === 'property') setPropertyForm((f) => ({ ...f, [key]: value }));
+    else if (section === 'security') setSecurityForm((f) => ({ ...f, [key]: value }));
+  };
 
   const tabs = [
     { id: 'account', icon: '👤', label: 'Tài khoản' },
@@ -328,7 +410,7 @@ export default function Settings() {
         <div style={{ padding: '0 16px 16px', fontSize: '0.75rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Cài đặt
         </div>
-        {tabs.map(tab => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -355,11 +437,17 @@ export default function Settings() {
         ))}
       </div>
 
-      {/* Content */}
+      {/* Content — tabs are always mounted, only shown/hidden via display */}
       <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
-        {activeTab === 'account' && <AccountTab user={user} />}
-        {activeTab === 'property' && <PropertyTab />}
-        {activeTab === 'security' && <SecurityTab />}
+        <div style={{ display: activeTab === 'account' ? 'block' : 'none' }}>
+          <AccountTab form={accountForm} onChange={handleChange} />
+        </div>
+        <div style={{ display: activeTab === 'property' ? 'block' : 'none' }}>
+          <PropertyTab form={propertyForm} onChange={handleChange} />
+        </div>
+        <div style={{ display: activeTab === 'security' ? 'block' : 'none' }}>
+          <SecurityTab form={securityForm} onChange={handleChange} />
+        </div>
       </div>
     </div>
   );
