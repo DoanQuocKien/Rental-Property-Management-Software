@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 import RoomForm from '../components/RoomForm';
+import { useSearch } from '../context/SearchContext';
 
 export default function LandlordDashboard() {
-  // --- GIỮ NGUYÊN TẤT CẢ CÁC STATE CỦA BẠN ---
+  const { query } = useSearch();
+
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -11,25 +13,23 @@ export default function LandlordDashboard() {
   const [editingRoom, setEditingRoom] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
 
-  // --- GIỮ NGUYÊN LOGIC FETCH DỮ LIỆU ---
   const fetchRooms = useCallback(async () => {
     setLoading(true);
     try {
-      const endpoint = activeTab === 'available' ? '/rooms/available' : '/rooms';
-      const res = await api.get(endpoint);
+      // Luôn fetch all để search hoạt động đúng
+      const res = await api.get('/rooms');
       setRooms(res.data.rooms || []);
     } catch {
       setError('Lỗi kết nối đến Server.');
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, []);
 
   useEffect(() => {
     fetchRooms();
   }, [fetchRooms]);
 
-  // --- GIỮ NGUYÊN LOGIC THÊM/SỬA ---
   const handleFormSubmit = async (data) => {
     try {
       if (editingRoom) {
@@ -45,7 +45,6 @@ export default function LandlordDashboard() {
     }
   };
 
-  // --- GIỮ NGUYÊN LOGIC XÓA ---
   const handleDeleteRoom = async (id) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa phòng này?')) return;
     try {
@@ -56,12 +55,31 @@ export default function LandlordDashboard() {
     }
   };
 
+  // Filter theo tab và search query
+  const filteredRooms = rooms.filter(room => {
+    const matchTab =
+      activeTab === 'all' ||
+      (activeTab === 'available' && room.status === 'available') ||
+      (activeTab === 'occupied' && room.status === 'occupied');
+
+    const q = query.trim().toLowerCase();
+    const matchSearch = !q || [
+      room.name,
+      room.description,
+      room.category,
+      String(room.price),
+      room.status,
+    ].some(v => v?.toLowerCase().includes(q));
+
+    return matchTab && matchSearch;
+  });
+
   const availableCount = rooms.filter(r => r.status === 'available').length;
   const occupiedCount = rooms.filter(r => r.status === 'occupied').length;
 
   return (
     <>
-      {/* 1. Phần Thống kê (Vẫn giữ số liệu thời gian thực của bạn) */}
+      {/* Thống kê */}
       <div className="stats-grid">
         <div className="stat-card-new total">
           <div className="stat-icon">📊</div>
@@ -87,22 +105,45 @@ export default function LandlordDashboard() {
       </div>
 
       <div className="content-card">
-        {/* 2. Thanh công cụ (Bộ lọc & Nút thêm) */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' }}>
-          <div className="tab-group">
-            <button
-              className={`tab-item ${activeTab === 'all' ? 'active' : ''}`}
-              onClick={() => setActiveTab('all')}
-            >
-              Tất cả phòng
-            </button>
-            <button
-              className={`tab-item ${activeTab === 'available' ? 'active' : ''}`}
-              onClick={() => setActiveTab('available')}
-            >
-              Phòng trống
-            </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="tab-group">
+              <button
+                className={`tab-item ${activeTab === 'all' ? 'active' : ''}`}
+                onClick={() => setActiveTab('all')}
+              >
+                Tất cả ({rooms.length})
+              </button>
+              <button
+                className={`tab-item ${activeTab === 'available' ? 'active' : ''}`}
+                onClick={() => setActiveTab('available')}
+              >
+                Phòng trống ({availableCount})
+              </button>
+              <button
+                className={`tab-item ${activeTab === 'occupied' ? 'active' : ''}`}
+                onClick={() => setActiveTab('occupied')}
+              >
+                Đã thuê ({occupiedCount})
+              </button>
+            </div>
+
+            {/* Search indicator */}
+            {query && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: '#f0f4ff', border: '1px solid #c3dafe',
+                borderRadius: 20, padding: '4px 12px',
+                fontSize: '0.8rem', color: '#667eea', fontWeight: 600,
+              }}>
+                🔍 &quot;{query}&quot;
+                <span style={{ color: '#a0aec0', fontWeight: 400 }}>
+                  — {filteredRooms.length} kết quả
+                </span>
+              </div>
+            )}
           </div>
+
           <button
             onClick={() => { setEditingRoom(null); setShowForm(true); }}
             className="btn-primary-gradient"
@@ -111,11 +152,20 @@ export default function LandlordDashboard() {
           </button>
         </div>
 
-        {error && <div className="error-alert" style={{color: 'red', marginBottom: '10px'}}>{error}</div>}
+        {error && <div className="error-alert" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
 
-        {/* 3. Bảng dữ liệu (Hiển thị dạng bảng chuyên nghiệp) */}
         {loading ? (
-          <div className="loading-spinner">Đang tải dữ liệu...</div>
+          <div className="loading-spinner" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Đang tải dữ liệu...</div>
+        ) : filteredRooms.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a0aec0' }}>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏠</div>
+            <p style={{ fontWeight: 600 }}>
+              {query ? `Không tìm thấy phòng nào khớp với "${query}"` : 'Chưa có phòng nào'}
+            </p>
+            {query && (
+              <p style={{ fontSize: '0.85rem', marginTop: 6 }}>Thử tìm với từ khóa khác hoặc xóa bộ lọc</p>
+            )}
+          </div>
         ) : (
           <div className="rooms-table-container">
             <table className="rooms-table">
@@ -130,9 +180,14 @@ export default function LandlordDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {rooms.map((room) => (
+                {filteredRooms.map((room) => (
                   <tr key={room.roomID || room.id}>
-                    <td className="font-bold">{room.name}</td>
+                    <td className="font-bold">
+                      {/* Highlight tên phòng nếu có search */}
+                      {query ? (
+                        <HighlightText text={room.name} query={query} />
+                      ) : room.name}
+                    </td>
                     <td>
                       <span className={`badge ${room.status}`}>
                         {room.status === 'available' ? 'Trống' : 'Đã thuê'}
@@ -163,9 +218,15 @@ export default function LandlordDashboard() {
             </table>
           </div>
         )}
+
+        {/* Footer đếm */}
+        {!loading && filteredRooms.length > 0 && query && (
+          <div style={{ padding: '12px 0 0', borderTop: '1px solid #f0f2f5', color: '#a0aec0', fontSize: '0.82rem', marginTop: 8 }}>
+            Hiển thị {filteredRooms.length} / {rooms.length} phòng
+          </div>
+        )}
       </div>
 
-      {/* 4. Modal Form (Giữ nguyên logic của bạn) */}
       {showForm && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -177,6 +238,22 @@ export default function LandlordDashboard() {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+// Component highlight từ khóa tìm kiếm
+function HighlightText({ text, query }) {
+  if (!query || !text) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark style={{ background: '#fef08a', borderRadius: 2, padding: '0 1px' }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
     </>
   );
 }

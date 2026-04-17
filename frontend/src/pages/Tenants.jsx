@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
+import { useSearch } from '../context/SearchContext';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '—');
@@ -11,6 +12,21 @@ const STATUS_BADGE = {
   expired:    { bg: '#fff5f5', color: '#e53e3e', label: '❌ Hết hạn'  },
   terminated: { bg: '#f7fafc', color: '#718096', label: '🚫 Đã chấm dứt' },
 };
+
+function HighlightText({ text, query }) {
+  if (!query || !text) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark style={{ background: '#fef08a', borderRadius: 2, padding: '0 1px' }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
 
 // ── sub-components ────────────────────────────────────────────────────────────
 function StatCard({ icon, value, label, accent }) {
@@ -30,9 +46,10 @@ function StatCard({ icon, value, label, accent }) {
   );
 }
 
-function TenantRow({ tenant, onViewDetail }) {
-  const days = tenant.end_date ? daysLeft(tenant.end_date) : null;
-  const badge = STATUS_BADGE[tenant.contract_status] || STATUS_BADGE.active;
+function TenantRow({ tenant, onViewDetail, searchQuery }) {
+  const name = tenant.fullName || tenant.name || '';
+  const days = tenant.endDate ? daysLeft(tenant.endDate) : null;
+  const badge = STATUS_BADGE[tenant.contractStatus] || STATUS_BADGE.active;
   const expiring = days !== null && days > 0 && days <= 30;
 
   return (
@@ -47,26 +64,34 @@ function TenantRow({ tenant, onViewDetail }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'white', fontWeight: 700, fontSize: '1rem',
           }}>
-            {tenant.name?.charAt(0).toUpperCase()}
+            {name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: '#2d3748', fontSize: '0.92rem' }}>{tenant.name}</div>
-            <div style={{ color: '#a0aec0', fontSize: '0.78rem' }}>{tenant.email}</div>
+            <div style={{ fontWeight: 700, color: '#2d3748', fontSize: '0.92rem' }}>
+              <HighlightText text={name} query={searchQuery} />
+            </div>
+            <div style={{ color: '#a0aec0', fontSize: '0.78rem' }}>
+              <HighlightText text={tenant.email} query={searchQuery} />
+            </div>
           </div>
         </div>
       </td>
       <td style={{ padding: '14px 16px', color: '#4a5568', fontSize: '0.88rem' }}>
-        {tenant.citizen_id || <span style={{ color: '#cbd5e0' }}>Chưa cập nhật</span>}
+        {tenant.citizenID
+          ? <HighlightText text={tenant.citizenID} query={searchQuery} />
+          : <span style={{ color: '#cbd5e0' }}>Chưa cập nhật</span>}
       </td>
       <td style={{ padding: '14px 16px', color: '#4a5568', fontSize: '0.88rem' }}>
-        {tenant.phone || <span style={{ color: '#cbd5e0' }}>—</span>}
+        {tenant.phoneNumber
+          ? <HighlightText text={tenant.phoneNumber} query={searchQuery} />
+          : <span style={{ color: '#cbd5e0' }}>—</span>}
       </td>
       <td style={{ padding: '14px 16px' }}>
         <span style={{
           background: '#edf2ff', color: '#667eea',
           padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700,
         }}>
-          🏠 {tenant.room_name}
+          🏠 <HighlightText text={tenant.roomName} query={searchQuery} />
         </span>
       </td>
       <td style={{ padding: '14px 16px' }}>
@@ -75,17 +100,19 @@ function TenantRow({ tenant, onViewDetail }) {
         </span>
       </td>
       <td style={{ padding: '14px 16px', fontSize: '0.88rem' }}>
-        {tenant.end_date ? (
+        {tenant.endDate ? (
           <span style={{ color: expiring ? '#e53e3e' : '#4a5568', fontWeight: expiring ? 700 : 400 }}>
-            {fmtDate(tenant.end_date)}
-            {expiring && <span style={{ marginLeft: 6, background: '#fff5f5', color: '#e53e3e', padding: '2px 6px', borderRadius: 10, fontSize: '0.72rem' }}>
-              {days} ngày
-            </span>}
+            {fmtDate(tenant.endDate)}
+            {expiring && (
+              <span style={{ marginLeft: 6, background: '#fff5f5', color: '#e53e3e', padding: '2px 6px', borderRadius: 10, fontSize: '0.72rem' }}>
+                {days} ngày
+              </span>
+            )}
           </span>
         ) : '—'}
       </td>
       <td style={{ padding: '14px 16px' }}>
-        <div style={{ fontWeight: 700, color: '#2d3748', fontSize: '0.88rem' }}>{fmtMoney(tenant.rental_price)}</div>
+        <div style={{ fontWeight: 700, color: '#2d3748', fontSize: '0.88rem' }}>{fmtMoney(tenant.rentalPrice)}</div>
         <div style={{ color: '#a0aec0', fontSize: '0.75rem' }}>/ tháng</div>
       </td>
       <td style={{ padding: '14px 16px' }}>
@@ -105,23 +132,25 @@ function DetailModal({ tenant, onClose, onTerminate }) {
   const [loading, setLoading] = useState(false);
   if (!tenant) return null;
 
+  const name = tenant.fullName || tenant.name || '';
+
   const handleTerminate = async () => {
     setLoading(true);
-    await onTerminate(tenant.contract_id);
+    await onTerminate(tenant.contractID);
     setLoading(false);
     setConfirming(false);
   };
 
   const rows = [
-    ['👤 Họ tên', tenant.name],
+    ['👤 Họ tên', name],
     ['📧 Email', tenant.email],
-    ['📞 Điện thoại', tenant.phone || '—'],
-    ['🪪 CCCD/CMND', tenant.citizen_id || '—'],
-    ['🏠 Phòng', tenant.room_name],
-    ['💰 Giá thuê', fmtMoney(tenant.rental_price)],
+    ['📞 Điện thoại', tenant.phoneNumber || '—'],
+    ['🪪 CCCD/CMND', tenant.citizenID || '—'],
+    ['🏠 Phòng', tenant.roomName],
+    ['💰 Giá thuê', fmtMoney(tenant.rentalPrice)],
     ['🔒 Tiền cọc', fmtMoney(tenant.deposit)],
-    ['📅 Bắt đầu', fmtDate(tenant.start_date)],
-    ['📅 Kết thúc', fmtDate(tenant.end_date)],
+    ['📅 Bắt đầu', fmtDate(tenant.startDate)],
+    ['📅 Kết thúc', fmtDate(tenant.endDate)],
   ];
 
   return (
@@ -134,7 +163,6 @@ function DetailModal({ tenant, onClose, onTerminate }) {
         background: 'white', borderRadius: 16, width: '100%', maxWidth: 480,
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden',
       }}>
-        {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', padding: '24px 28px', color: 'white' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -143,10 +171,10 @@ function DetailModal({ tenant, onClose, onTerminate }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 800, fontSize: '1.4rem',
               }}>
-                {tenant.name?.charAt(0).toUpperCase()}
+                {name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{tenant.name}</div>
+                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{name}</div>
                 <div style={{ opacity: 0.8, fontSize: '0.85rem', marginTop: 2 }}>Khách thuê</div>
               </div>
             </div>
@@ -157,7 +185,6 @@ function DetailModal({ tenant, onClose, onTerminate }) {
           </div>
         </div>
 
-        {/* Body */}
         <div style={{ padding: '24px 28px' }}>
           {rows.map(([label, value]) => (
             <div key={label} style={{
@@ -169,14 +196,13 @@ function DetailModal({ tenant, onClose, onTerminate }) {
             </div>
           ))}
 
-          {/* Terminate button */}
-          {tenant.contract_status === 'active' && (
+          {tenant.contractStatus === 'active' && (
             <div style={{ marginTop: 20 }}>
               {!confirming ? (
                 <button onClick={() => setConfirming(true)} style={{
                   width: '100%', padding: '11px', border: '1.5px solid #e53e3e',
                   background: 'transparent', color: '#e53e3e', borderRadius: 10,
-                  fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s',
+                  fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem',
                 }}
                   onMouseEnter={e => { e.target.style.background = '#fff5f5'; }}
                   onMouseLeave={e => { e.target.style.background = 'transparent'; }}>
@@ -210,10 +236,11 @@ function DetailModal({ tenant, onClose, onTerminate }) {
 
 // ── main page ─────────────────────────────────────────────────────────────────
 export default function Tenants() {
+  const { query } = useSearch();
+
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [toast, setToast] = useState('');
 
@@ -248,13 +275,17 @@ export default function Tenants() {
     }
   };
 
-  const filtered = tenants.filter(t =>
-    [t.name, t.email, t.citizen_id, t.phone, t.room_name]
-      .some(v => v?.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Filter theo search query từ Navbar
+  const filtered = tenants.filter(t => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const name = t.fullName || t.name || '';
+    return [name, t.email, t.citizenID, t.phoneNumber, t.roomName]
+      .some(v => v?.toLowerCase().includes(q));
+  });
 
   const expiringSoon = tenants.filter(t => {
-    const d = t.end_date ? daysLeft(t.end_date) : null;
+    const d = t.endDate ? daysLeft(t.endDate) : null;
     return d !== null && d > 0 && d <= 30;
   }).length;
 
@@ -277,27 +308,32 @@ export default function Tenants() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         <StatCard icon="👥" value={tenants.length} label="Tổng khách thuê" accent="#667eea" />
-        <StatCard icon="✅" value={tenants.filter(t => t.contract_status === 'active').length} label="Hợp đồng active" accent="#38b2ac" />
+        <StatCard icon="✅" value={tenants.filter(t => t.contractStatus === 'active').length} label="Hợp đồng active" accent="#38b2ac" />
         <StatCard icon="⚠️" value={expiringSoon} label="Sắp hết hạn (≤30 ngày)" accent="#d69e2e" />
       </div>
 
       {/* Bảng khách thuê */}
       <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
         {/* Toolbar */}
-        <div style={{ padding: '18px 20px', borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ fontWeight: 700, fontSize: '1rem', color: '#2d3748' }}>👥 Danh sách khách thuê</div>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="🔍 Tìm theo tên, email, CCCD, phòng..."
-            style={{
-              padding: '9px 16px', border: '1.5px solid #e2e8f0', borderRadius: 10,
-              width: 300, fontSize: '0.88rem', outline: 'none', background: '#f8fafc',
-              transition: 'border-color 0.2s',
-            }}
-            onFocus={e => e.target.style.borderColor = '#667eea'}
-            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-          />
+
+          {/* Search indicator từ Navbar */}
+          {query ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#f0f4ff', border: '1px solid #c3dafe',
+              borderRadius: 20, padding: '6px 14px',
+              fontSize: '0.82rem', color: '#667eea', fontWeight: 600,
+            }}>
+              🔍 &quot;{query}&quot;
+              <span style={{ color: '#a0aec0', fontWeight: 400 }}>— {filtered.length} kết quả</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.82rem', color: '#a0aec0' }}>
+              Dùng thanh tìm kiếm trên để lọc theo tên, email, CCCD, SĐT, phòng
+            </div>
+          )}
         </div>
 
         {error && (
@@ -314,9 +350,11 @@ export default function Tenants() {
         ) : filtered.length === 0 ? (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: '#a0aec0' }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>👥</div>
-            <p style={{ fontWeight: 600 }}>{search ? 'Không tìm thấy khách thuê phù hợp' : 'Chưa có khách thuê nào'}</p>
+            <p style={{ fontWeight: 600 }}>
+              {query ? `Không tìm thấy khách thuê khớp với "${query}"` : 'Chưa có khách thuê nào'}
+            </p>
             <p style={{ fontSize: '0.85rem', marginTop: 6 }}>
-              {!search && 'Tạo hợp đồng để thêm khách thuê vào hệ thống'}
+              {!query && 'Tạo hợp đồng để thêm khách thuê vào hệ thống'}
             </p>
           </div>
         ) : (
@@ -335,14 +373,18 @@ export default function Tenants() {
               </thead>
               <tbody>
                 {filtered.map(t => (
-                  <TenantRow key={t.contract_id || t.id} tenant={t} onViewDetail={setSelected} />
+                  <TenantRow
+                    key={t.contractID || t.id}
+                    tenant={t}
+                    onViewDetail={setSelected}
+                    searchQuery={query}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         )}
 
-        {/* Footer count */}
         {!loading && filtered.length > 0 && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f2f5', color: '#a0aec0', fontSize: '0.82rem' }}>
             Hiển thị {filtered.length} / {tenants.length} khách thuê

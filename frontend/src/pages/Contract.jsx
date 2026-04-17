@@ -28,14 +28,156 @@ function Field({ label, required, hint, children }) {
   );
 }
 
-function Section({ icon, title, children }) {
+function Section({ icon, title, children, columns = 2 }) {
   return (
-    <div style={{ background: 'white', borderRadius: 14, padding: '24px 28px', marginBottom: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, paddingBottom: 14, borderBottom: '2px solid #f0f2f5' }}>
+    <div style={{
+      background: 'white', borderRadius: 14, padding: '24px 28px',
+      marginBottom: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20,
+        paddingBottom: 14, borderBottom: '2px solid #f0f2f5',
+      }}>
         <span style={{ fontSize: '1.2rem' }}>{icon}</span>
         <span style={{ fontWeight: 800, color: '#2d3748', fontSize: '1rem' }}>{title}</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>{children}</div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gap: 16,
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Tenant Info Card ──────────────────────────────────────────────────────────
+function TenantInfoCard({ tenant }) {
+  if (!tenant) return null;
+
+  const fields = [
+    { icon: '🪪', label: 'CCCD/CMND', value: tenant.citizenID || 'Chưa cập nhật' },
+    { icon: '📞', label: 'Điện thoại', value: tenant.phoneNumber || 'Chưa cập nhật' },
+    { icon: '📍', label: 'Địa chỉ', value: tenant.permanentAddress || 'Chưa cập nhật' },
+    { icon: '📧', label: 'Email', value: tenant.email },
+    {
+      icon: '📋', label: 'Trạng thái',
+      value: tenant.hasActiveContract
+        ? '⚠️ Đang có hợp đồng'
+        : '✅ Sẵn sàng ký HĐ',
+      color: tenant.hasActiveContract ? '#d69e2e' : '#38b2ac',
+    },
+  ];
+
+  return (
+    <div style={{
+      gridColumn: '1 / -1',
+      background: 'linear-gradient(135deg, #f0f9ff 0%, #e6fffa 100%)',
+      borderRadius: 12, padding: '16px 20px',
+      border: '1.5px solid #bee3f8',
+    }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #38b2ac, #319795)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'white', fontWeight: 800, fontSize: '1.3rem', flexShrink: 0,
+        }}>
+          {(tenant.fullName || '?').charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <div style={{ fontWeight: 800, color: '#1a202c', fontSize: '1.05rem' }}>
+            {tenant.fullName}
+          </div>
+          <div style={{ color: '#718096', fontSize: '0.82rem', marginTop: 2 }}>
+            ID: #{tenant.id} &nbsp;·&nbsp; Người thuê trọ
+          </div>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <span style={{
+            background: tenant.hasActiveContract ? '#fffbeb' : '#e6fffa',
+            color: tenant.hasActiveContract ? '#d69e2e' : '#38b2ac',
+            border: `1px solid ${tenant.hasActiveContract ? '#f6e05e' : '#81e6d9'}`,
+            padding: '4px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700,
+          }}>
+            {tenant.hasActiveContract ? '⚠️ Đang có HĐ' : '✅ Khả dụng'}
+          </span>
+        </div>
+      </div>
+
+      {/* Info grid */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '10px 20px',
+      }}>
+        {fields.slice(0, -1).map(f => (
+          <div key={f.label} style={{
+            background: 'white', borderRadius: 8,
+            padding: '10px 14px', border: '1px solid #e2e8f0',
+          }}>
+            <div style={{ fontSize: '0.72rem', color: '#a0aec0', fontWeight: 600, marginBottom: 3 }}>
+              {f.icon} {f.label}
+            </div>
+            <div style={{
+              fontSize: '0.88rem', fontWeight: 600,
+              color: f.color || '#2d3748',
+              wordBreak: 'break-word',
+            }}>
+              {f.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {tenant.hasActiveContract && (
+        <div style={{
+          marginTop: 12, background: '#fffbeb',
+          border: '1px solid #f6e05e', borderRadius: 8,
+          padding: '10px 14px', fontSize: '0.82rem', color: '#744210',
+        }}>
+          ⚠️ <strong>Lưu ý:</strong> Khách thuê này đang có hợp đồng active. Hệ thống sẽ từ chối tạo hợp đồng mới cho đến khi hợp đồng hiện tại kết thúc.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Room Info Card ────────────────────────────────────────────────────────────
+function RoomInfoCard({ room }) {
+  if (!room) return null;
+  return (
+    <div style={{
+      gridColumn: '1 / -1',
+      background: 'linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%)',
+      borderRadius: 12, padding: '14px 20px',
+      border: '1.5px solid #c3dafe',
+      display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+    }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 10,
+        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'white', fontSize: '1.3rem', flexShrink: 0,
+      }}>🏠</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 800, color: '#2d3748', fontSize: '1rem' }}>{room.name}</div>
+        <div style={{ color: '#718096', fontSize: '0.8rem', marginTop: 2 }}>
+          {room.area ? `${room.area} m²` : ''} {room.category ? `· ${room.category}` : ''} · {room.maxOccupants || 1} người tối đa
+        </div>
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#667eea' }}>
+          {Number(room.price).toLocaleString('vi-VN')}đ
+        </div>
+        <div style={{ fontSize: '0.75rem', color: '#a0aec0' }}>/tháng</div>
+      </div>
+      <span style={{
+        background: '#e6fffa', color: '#38b2ac',
+        border: '1px solid #81e6d9',
+        padding: '4px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700,
+      }}>✅ Đang trống</span>
     </div>
   );
 }
@@ -113,6 +255,11 @@ function printContract(contractHTML) {
 // ── Preview component ─────────────────────────────────────────────────────────
 function ContractPreview({ form, selectedRoom, selectedTenant, durationMonths }) {
   const contractNo = `HD${String(Math.floor(Math.random() * 9000) + 1000).padStart(6, '0')}/${new Date().getFullYear()}`;
+  const tenantName = selectedTenant?.fullName || '___';
+  const tenantCitizenId = selectedTenant?.citizenID || '___';
+  const tenantPhone = selectedTenant?.phoneNumber || '___';
+  const tenantAddress = selectedTenant?.permanentAddress || '___';
+
   return (
     <div className="contract-print-area">
       <div style={{ background: 'white', padding: '48px', fontFamily: 'serif', color: '#222', lineHeight: '1.8', fontSize: '13pt' }}>
@@ -145,10 +292,10 @@ function ContractPreview({ form, selectedRoom, selectedTenant, durationMonths })
         <div style={{ background: '#f8fafc', borderRadius: 8, padding: '16px 20px', marginBottom: 16 }}>
           <div style={{ fontWeight: 700, color: '#333', marginBottom: 4 }}>BÊN THUÊ (Bên B):</div>
           <table style={{ width: '100%', fontSize: '0.9rem' }}><tbody>
-            <tr><td style={{ padding: '3px 0', color: '#666', width: 180 }}>Họ và tên:</td><td><strong>{selectedTenant?.name || '___'}</strong></td></tr>
-            <tr><td style={{ padding: '3px 0', color: '#666' }}>Số CCCD/CMND:</td><td>{selectedTenant?.citizen_id || '___'}</td></tr>
-            <tr><td style={{ padding: '3px 0', color: '#666' }}>Số điện thoại:</td><td>{selectedTenant?.phone || '___'}</td></tr>
-            <tr><td style={{ padding: '3px 0', color: '#666' }}>Địa chỉ thường trú:</td><td>{selectedTenant?.permanent_address || '___'}</td></tr>
+            <tr><td style={{ padding: '3px 0', color: '#666', width: 180 }}>Họ và tên:</td><td><strong>{selectedTenant?.fullName || '___'}</strong></td></tr>
+            <tr><td style={{ padding: '3px 0', color: '#666' }}>Số CCCD/CMND:</td><td>{selectedTenant?.citizenID || '___'}</td></tr>
+            <tr><td style={{ padding: '3px 0', color: '#666' }}>Số điện thoại:</td><td>{selectedTenant?.phoneNumber || '___'}</td></tr>
+            <tr><td style={{ padding: '3px 0', color: '#666' }}>Địa chỉ thường trú:</td><td>{selectedTenant?.permanentAddress || '___'}</td></tr>
           </tbody></table>
         </div>
 
@@ -164,14 +311,14 @@ function ContractPreview({ form, selectedRoom, selectedTenant, durationMonths })
           <p>Thời hạn thuê phòng là <strong>{durationMonths} tháng</strong>, bắt đầu từ ngày <strong>{form.start_date ? new Date(form.start_date).toLocaleDateString('vi-VN') : '___'}</strong> đến ngày <strong>{form.end_date ? new Date(form.end_date).toLocaleDateString('vi-VN') : '___'}</strong>.</p>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ fontWeight: '700' , marginBottom: '8px' }}>ĐIỀU 3: GIÁ THUÊ VÀ PHƯƠNG THỨC THANH TOÁN</div>
-          <ul style={{ paddingLeft: '20px', lineHeight: '1.5' }}>
-            <li>Giá thuê phòng: <strong>{form.rental_price ? Number(form.rental_price).toLocaleString('vi-VN') : '___'} đồng/tháng</strong></li>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>ĐIỀU 3: GIÁ THUÊ VÀ PHƯƠNG THỨC THANH TOÁN</div>
+          <ul style={{ paddingLeft: 20, lineHeight: 1.5 }}>
+            <li>Giá thuê phòng: <strong>{form.rentalPrice ? Number(form.rentalPrice).toLocaleString('vi-VN') : '___'} đồng/tháng</strong></li>
             <li>Tiền đặt cọc: <strong>{form.deposit ? Number(form.deposit).toLocaleString('vi-VN') : '0'} đồng</strong></li>
-            <li>Giá điện: <strong>{Number(form.electricity_price).toLocaleString('vi-VN')} đồng/kWh</strong></li>
-            <li>Giá nước: <strong>{Number(form.water_price).toLocaleString('vi-VN')} đồng/m³</strong></li>
-            <li>Thanh toán trước ngày <strong>{form.payment_day}</strong> hàng tháng</li>
+            {form.electricity_price && <li>Giá điện: <strong>{Number(form.electricity_price).toLocaleString('vi-VN')} đồng/kWh</strong></li>}
+            {form.water_price && <li>Giá nước: <strong>{Number(form.water_price).toLocaleString('vi-VN')} đồng/m³</strong></li>}
+            <li>Thanh toán trước ngày <strong>{form.payment_day || 5}</strong> hàng tháng</li>
           </ul>
         </div>
 
@@ -219,13 +366,16 @@ function ContractPreview({ form, selectedRoom, selectedTenant, durationMonths })
 // ── main page ─────────────────────────────────────────────────────────────────
 export default function Contract() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState('form'); // 'form' | 'preview'
+  const [tab, setTab] = useState('form');
   const [rooms, setRooms] = useState([]);
   const [allTenants, setAllTenants] = useState([]);
+  const [tenantSearch, setTenantSearch] = useState('');
+  const [showTenantDropdown, setShowTenantDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState('');
+  const tenantDropdownRef = useState(null);
 
   const [form, setForm] = useState({
     roomID: '', tenantID: '',
@@ -234,7 +384,6 @@ export default function Contract() {
     electricity_price: '',
     water_price: '',
     payment_day: '',   
-    // thông tin chủ trọ cho hợp đồng
     landlord_name: '', landlord_id_card: '',
     landlord_phone: '', landlord_address: '',
   });
@@ -273,12 +422,24 @@ export default function Contract() {
     ? Math.round((new Date(form.endDate) - new Date(form.startDate)) / (86400000 * 30))
     : 0;
 
+ // Filtered tenants for search
+  const filteredTenants = allTenants.filter(t => {
+    const q = tenantSearch.toLowerCase();
+    return (
+      (t.fullName || '').toLowerCase().includes(q) ||
+      (t.email || '').toLowerCase().includes(q) ||
+      (t.citizenID || '').toLowerCase().includes(q) ||
+      (t.phoneNumber || '').toLowerCase().includes(q)
+    );
+  });
+
   const validate = () => {
     if (!form.roomID) return 'Vui lòng chọn phòng';
     if (!form.tenantID) return 'Vui lòng chọn khách thuê';
     if (!form.startDate || !form.endDate) return 'Vui lòng nhập ngày bắt đầu và kết thúc';
     if (new Date(form.endDate) <= new Date(form.startDate)) return 'Ngày kết thúc phải sau ngày bắt đầu';
     if (!form.rentalPrice || Number(form.rentalPrice) <= 0) return 'Vui lòng nhập giá thuê hợp lệ';
+    if (selectedTenant?.hasActiveContract) return 'Khách thuê đang có hợp đồng active';
     return '';
   };
 
@@ -312,10 +473,13 @@ export default function Contract() {
     return (
       <MainLayout title="Tạo hợp đồng">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
-          <div style={{ textAlign: 'center', background: 'white', borderRadius: 16, padding: '60px 40px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <div style={{
+            textAlign: 'center', background: 'white', borderRadius: 16,
+            padding: '60px 40px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          }}>
             <div style={{ fontSize: '4rem', marginBottom: 16 }}>✅</div>
             <h2 style={{ color: '#38b2ac', marginBottom: 8 }}>Tạo hợp đồng thành công!</h2>
-            <p style={{ color: '#888', fontSize: '0.9rem' }}>Phòng đã được cập nhật sang trạng thái "Đã thuê". Đang chuyển hướng...</p>
+            <p style={{ color: '#888', fontSize: '0.9rem' }}>Phòng đã được cập nhật sang "Đã thuê". Đang chuyển hướng...</p>
           </div>
         </div>
       </MainLayout>
@@ -373,30 +537,113 @@ export default function Contract() {
                 </select>
               </Field>
 
-              <Field label="Khách thuê (ID)" required hint="Chọn tài khoản đã đăng ký với role tenant">
-                <select name="tenantID" value={form.tenantID} onChange={handleChange}
-                  onFocus={() => setFocusField('tenantID')} onBlur={() => setFocusField('')}
-                  style={inputStyle(focusField === 'tenantID')}>
-                  <option value="">-- Chọn khách thuê --</option>
-                  {allTenants.map(t => (
-                    <option key={t.id} value={t.id} disabled={!!t.has_active_contract}>
-                      [{t.id}] {t.name} — {t.email}
-                      {t.has_active_contract ? ' (Đang có HĐ)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              {/* Room info preview */}
+              {selectedRoom && <RoomInfoCard room={selectedRoom} />}
 
-              {/* Tenant info preview */}
-              {selectedTenant && (
-                <div style={{ gridColumn: '1 / -1', background: '#f0f4ff', borderRadius: 10, padding: '14px 16px', border: '1px solid #c3dafe' }}>
-                  <div style={{ fontWeight: 700, color: '#667eea', marginBottom: 8, fontSize: '0.85rem' }}>ℹ️ Thông tin khách thuê đã chọn:</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: '0.85rem', color: '#4a5568' }}>
-                    <div><span style={{ color: '#a0aec0' }}>CCCD:</span> {selectedTenant.citizen_id || 'Chưa cập nhật'}</div>
-                    <div><span style={{ color: '#a0aec0' }}>SĐT:</span> {selectedTenant.phone || 'Chưa cập nhật'}</div>
-                    <div><span style={{ color: '#a0aec0' }}>Địa chỉ:</span> {selectedTenant.permanent_address || 'Chưa cập nhật'}</div>
+              {/* Tenant search */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Field label="Tìm kiếm khách thuê" required hint="Tìm theo tên, email, CCCD, SĐT">
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      value={tenantSearch || (selectedTenant ? (selectedTenant.fullName) : '')}
+                      onChange={e => {
+                        setTenantSearch(e.target.value);
+                        setShowTenantDropdown(true);
+                        if (!e.target.value) setForm(f => ({ ...f, tenantID: '' }));
+                      }}
+                      onFocus={() => setShowTenantDropdown(true)}
+                      placeholder="🔍 Nhập tên, email, CCCD hoặc SĐT..."
+                      style={{
+                        ...inputStyle(showTenantDropdown),
+                        paddingLeft: '14px',
+                      }}
+                    />
+                    {showTenantDropdown && (
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                        background: 'white', borderRadius: 10,
+                        border: '1.5px solid #c3dafe',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        zIndex: 100, maxHeight: 260, overflowY: 'auto',
+                      }}>
+                        {filteredTenants.length === 0 ? (
+                          <div style={{ padding: '16px', textAlign: 'center', color: '#a0aec0', fontSize: '0.88rem' }}>
+                            Không tìm thấy khách thuê
+                          </div>
+                        ) : (
+                          filteredTenants.map(t => (
+                            <div
+                              key={t.id}
+                              onClick={() => {
+                                if (!t.hasActiveContract) {
+                                  setForm(f => ({ ...f, tenantID: String(t.id) }));
+                                  setTenantSearch('');
+                                  setShowTenantDropdown(false);
+                                }
+                              }}
+                              style={{
+                                padding: '12px 16px',
+                                cursor: t.hasActiveContract ? 'not-allowed' : 'pointer',
+                                borderBottom: '1px solid #f0f2f5',
+                                opacity: t.hasActiveContract ? 0.6 : 1,
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                transition: 'background 0.15s',
+                              }}
+                              onMouseEnter={e => {
+                                if (!t.hasActiveContract)
+                                  e.currentTarget.style.background = '#f0f4ff';
+                              }}
+                              onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                            >
+                              <div style={{
+                                width: 36, height: 36, borderRadius: '50%',
+                                background: t.hasActiveContract
+                                  ? '#e2e8f0'
+                                  : 'linear-gradient(135deg, #38b2ac, #319795)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'white', fontWeight: 700, fontSize: '0.95rem', flexShrink: 0,
+                              }}>
+                                {(t.fullName || '?').charAt(0).toUpperCase()}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2d3748' }}>
+                                  {t.fullName}
+                                  {t.hasActiveContract && (
+                                    <span style={{ marginLeft: 8, color: '#d69e2e', fontSize: '0.75rem', fontWeight: 600 }}>
+                                      ⚠️ Đang có HĐ
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: '#a0aec0' }}>
+                                  {t.email} {t.phoneNumber ? `· ${t.phoneNumber}` : ''}
+                                </div>
+                              </div>
+                              {!t.hasActiveContract && (
+                                <span style={{ color: '#38b2ac', fontSize: '0.78rem', fontWeight: 600 }}>Chọn →</span>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
+                </Field>
+              </div>
+
+              {/* Hide dropdown on outside click */}
+              {showTenantDropdown && (
+                <div
+                  onClick={() => setShowTenantDropdown(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 99,
+                  }}
+                />
+              )}
+
+              {/* Tenant info card */}
+              {selectedTenant && (
+                <TenantInfoCard tenant={selectedTenant} />
               )}
             </Section>
 
@@ -413,7 +660,11 @@ export default function Contract() {
                   style={inputStyle(focusField === 'endDate')} />
               </Field>
               {durationMonths > 0 && (
-                <div style={{ gridColumn: '1 / -1', background: '#f0f4ff', borderRadius: 10, padding: '10px 14px', color: '#667eea', fontSize: '0.85rem', fontWeight: 700 }}>
+                <div style={{
+                  gridColumn: '1 / -1',
+                  background: '#f0f4ff', borderRadius: 10,
+                  padding: '10px 14px', color: '#667eea', fontSize: '0.85rem', fontWeight: 700,
+                }}>
                   📌 Thời hạn hợp đồng: khoảng <strong>{durationMonths} tháng</strong>
                 </div>
               )}
