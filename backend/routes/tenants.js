@@ -10,7 +10,7 @@ const router = express.Router();
 // GET /api/tenants - Lấy danh sách khách thuê
 router.get('/', authenticateToken, requireRole('landlord'), (req, res) => {
   db.all(
-    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, created_at, updated_at 
+    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, status, created_at, updated_at 
      FROM users 
      WHERE role = 'tenant' OR role = 'Tenant' 
      ORDER BY created_at DESC`,
@@ -218,10 +218,31 @@ router.post('/maintenance', authenticateToken, requireRole('tenant'), (req, res)
 
 // --- API Quản lý theo ID (cần đặt dưới cùng để tránh ghi đè các route như /profile, /contract) ---
 
+// PUT /api/tenants/:id/status - Duyệt/Kích hoạt hoặc Khóa tài khoản khách thuê
+router.put('/:id/status', authenticateToken, requireRole('landlord'), (req, res) => {
+  const { status } = req.body;
+  const validStatuses = ['pending', 'active', 'inactive'];
+
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({ error: `Trạng thái không hợp lệ. Chỉ chấp nhận: ${validStatuses.join(', ')}` });
+  }
+
+  db.run(
+    `UPDATE users SET status = ?, updated_at = CURRENT_TIMESTAMP 
+     WHERE id = ? AND (role = 'tenant' OR role = 'Tenant')`,
+    [status, req.params.id],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Cập nhật trạng thái thất bại' });
+      if (this.changes === 0) return res.status(404).json({ error: 'Không tìm thấy khách thuê' });
+      res.json({ message: 'Cập nhật trạng thái tài khoản thành công', status });
+    }
+  );
+});
+
 // GET /api/tenants/:id - Lấy chi tiết khách thuê
 router.get('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
   db.get(
-    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, created_at, updated_at 
+    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, status, created_at, updated_at 
      FROM users WHERE id = ? AND (role = 'tenant' OR role = 'Tenant')`,
     [req.params.id],
     (err, tenant) => {

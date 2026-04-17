@@ -81,6 +81,7 @@ db.serialize(() => {
       permanent_address TEXT,
       date_of_birth TEXT,
       gender TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -93,6 +94,7 @@ db.serialize(() => {
   ensureColumn('users', 'permanent_address', 'TEXT');
   ensureColumn('users', 'date_of_birth', 'TEXT');
   ensureColumn('users', 'gender', 'TEXT');
+  ensureColumn('users', 'status', "TEXT NOT NULL DEFAULT 'active'");
   ensureColumn('users', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
 
   db.run(`
