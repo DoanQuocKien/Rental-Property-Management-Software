@@ -4,17 +4,19 @@ import Navbar from './Navbar';
 export default function MainLayout({ children, title }) {
   return (
     <div className="dashboard-layout">
+      {/* 1. Thanh bên trái */}
       <Sidebar />
+
       <div className="dashboard-content">
-        <Navbar />
+        {/* 2. Thanh ngang trên cùng (Đã sửa logic hiện đúng Người thuê/Chủ trọ) */}
+        <Navbar title={title} />
+
         <main className="dashboard-body">
-          <header className="page-header">
-            <div className="welcome-text">
-              <h2>{title}</h2>
-              <p>Hệ thống quản lý thời gian thực</p>
-            </div>
-          </header>
-          {children} {/* Nội dung riêng của từng trang sẽ chui vào đây */}
+          {/* ĐÃ XÓA: Phần <header className="page-header"> cũ ở đây.
+            Lý do: Nó gây ra lỗi "2 thanh" và làm mất diện tích hiển thị.
+          */}
+
+          {children} {/* Nội dung của từng trang (Dashboard, Hợp đồng...) sẽ hiện ở đây */}
         </main>
       </div>
     </div>
