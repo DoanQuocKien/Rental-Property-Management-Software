@@ -440,6 +440,12 @@ export default function Contract() {
     if (new Date(form.endDate) <= new Date(form.startDate)) return 'Ngày kết thúc phải sau ngày bắt đầu';
     if (!form.rentalPrice || Number(form.rentalPrice) <= 0) return 'Vui lòng nhập giá thuê hợp lệ';
     if (selectedTenant?.hasActiveContract) return 'Khách thuê đang có hợp đồng active';
+    if (form.electricity_price <= 0 || form.electricity_price > 4000) return 'Vui lòng nhập lại giá điện';
+    if (form.water_price <= 0 || form.water_price > 18000) return 'Vui lòng nhập lại giá nước';
+    if (!form.landlord_name) return 'Vui lòng nhập số họ và tên chủ trọ';
+    if (!form.landlord_id_card) return 'Vui lòng nhập số CCCD/CMND chủ trọ';
+    if (!form.landlord_phone) return 'Vui lòng nhập số điện thoại chủ trọ';
+    if (!form.landlord_address) return 'Vui lòng nhập địa chỉ chủ trọ';
     return '';
   };
 
@@ -684,15 +690,15 @@ export default function Contract() {
                   onFocus={() => setFocusField('deposit')} onBlur={() => setFocusField('')}
                   style={inputStyle(focusField === 'deposit')} />
               </Field>
-              <Field label="Giá điện (VNĐ/kWh)">
+              <Field label="Giá điện (VNĐ/kWh)" required>
                 <input type="number" name="electricity_price" value={form.electricity_price} onChange={handleChange}
-                  placeholder="4000" min="0"
+                  placeholder="4000" required min="0"
                   onFocus={() => setFocusField('electricity_price')} onBlur={() => setFocusField('')}
                   style={inputStyle(focusField === 'electricity_price')} />
               </Field>
-              <Field label="Giá nước (VNĐ/m³)">
+              <Field label="Giá nước (VNĐ/m³)" required>
                 <input type="number" name="water_price" value={form.water_price} onChange={handleChange}
-                  placeholder="15000" min="0"
+                  placeholder="18000" required min="0"
                   onFocus={() => setFocusField('water_price')} onBlur={() => setFocusField('')}
                   style={inputStyle(focusField === 'water_price')} />
               </Field>
@@ -709,25 +715,25 @@ export default function Contract() {
 
             {/* Section 4: Thông tin chủ trọ (cho hợp đồng) */}
             <Section icon="👤" title="Thông tin bên cho thuê (hiển thị trên hợp đồng)">
-              <Field label="Họ tên chủ trọ">
+              <Field label="Họ tên chủ trọ" required>
                 <input type="text" name="landlord_name" value={form.landlord_name} onChange={handleChange}
                   placeholder="Nguyễn Văn A"
                   onFocus={() => setFocusField('landlord_name')} onBlur={() => setFocusField('')}
                   style={inputStyle(focusField === 'landlord_name')} />
               </Field>
-              <Field label="Số CCCD/CMND">
+              <Field label="Số CCCD/CMND" required>
                 <input type="text" name="landlord_id_card" value={form.landlord_id_card} onChange={handleChange}
                   placeholder="012345678901"
                   onFocus={() => setFocusField('landlord_id_card')} onBlur={() => setFocusField('')}
                   style={inputStyle(focusField === 'landlord_id_card')} />
               </Field>
-              <Field label="Số điện thoại">
+              <Field label="Số điện thoại" required>
                 <input type="tel" name="landlord_phone" value={form.landlord_phone} onChange={handleChange}
                   placeholder="0912 345 678"
                   onFocus={() => setFocusField('landlord_phone')} onBlur={() => setFocusField('')}
                   style={inputStyle(focusField === 'landlord_phone')} />
               </Field>
-              <Field label="Địa chỉ thường trú">
+              <Field label="Địa chỉ thường trú" required>
                 <input type="text" name="landlord_address" value={form.landlord_address} onChange={handleChange}
                   placeholder="123 Đường ABC, TP.HCM"
                   onFocus={() => setFocusField('landlord_address')} onBlur={() => setFocusField('')}
