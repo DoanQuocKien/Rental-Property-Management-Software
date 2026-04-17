@@ -217,8 +217,8 @@ router.get('/', authenticateToken, requireRole('landlord'), async (req, res) => 
   }
 });
  
-// GET /api/contracts/:id — Chi tiết hợp đồng
-router.get('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
+// GET /api/contracts/:id — Chi tiết hợp đồng (cho cả Chủ trọ và Khách thuê)
+router.get('/:id', authenticateToken, async (req, res) => {
   const contractId = Number(req.params.id);
  
   if (!Number.isInteger(contractId) || contractId <= 0) {
@@ -249,18 +249,22 @@ router.get('/:id', authenticateToken, requireRole('landlord'), async (req, res) 
         u.email as tenantEmail,
         u.phone_number as tenantPhone,
         u.citizen_id as tenantCitizenID,
-        u.permanent_address as tenantAddress
+        u.permanent_address as tenantAddress,
+        COALESCE(l.full_name, l.name) as landlordName,
+        l.email as landlordEmail,
+        l.phone_number as landlordPhone
        FROM lease_contracts lc
        JOIN rooms r ON lc.room_id = r.id
        JOIN users u ON lc.tenant_id = u.id
-       WHERE lc.id = ? AND r.landlord_id = ?`,
-      [contractId, req.user.id]
+       JOIN users l ON r.landlord_id = l.id
+       WHERE lc.id = ? AND (r.landlord_id = ? OR lc.tenant_id = ?)`,
+      [contractId, req.user.id, req.user.id]
     );
  
     if (!contract) {
       return res.status(404).json({
         status: 'error',
-        message: 'Contract not found.',
+        message: 'Contract not found or access denied.',
         errorCode: 'CONTRACT_NOT_FOUND',
       });
     }
