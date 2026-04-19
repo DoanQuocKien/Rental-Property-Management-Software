@@ -1,6 +1,12 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const {
+  calculateInvoiceTotal,
+  BillingValidationError,
+  ServicePricingConfigError,
+} = require('../services/invoiceCalculator');
+const { getPreviousMeterReading } = require('../services/meterReadingService');
 
 const router = express.Router();
 
@@ -275,6 +281,163 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
       status: 'error',
       message: 'Failed to update maintenance request.',
       errorCode: 'UPDATE_FAILED',
+    });
+  }
+});
+
+// GET /api/landlord/rooms/:roomID/previous-reading?month=&year=
+// Lấy chỉ số gần nhất trước kỳ hiện tại để đối chiếu khi lập hóa đơn.
+router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('landlord'), async (req, res) => {
+  const roomID = Number(req.params.roomID);
+  const month = Number(req.query.month);
+  const year = Number(req.query.year);
+
+  if (
+    !Number.isInteger(roomID) ||
+    roomID <= 0 ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12 ||
+    !Number.isInteger(year) ||
+    year < 2000 ||
+    year > 9999
+  ) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'roomID must be a positive integer, month must be between 1 and 12, and year must be between 2000 and 9999.',
+      errorCode: 'INVALID_PAYLOAD',
+    });
+  }
+
+  try {
+    const room = await db.getAsync('SELECT id FROM rooms WHERE id = ? AND landlord_id = ?', [roomID, req.user.id]);
+
+    if (!room) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Room not found.',
+        errorCode: 'ROOM_NOT_FOUND',
+      });
+    }
+
+    const previousReading = await getPreviousMeterReading(roomID, month, year);
+
+    return res.json({
+      status: 'success',
+      data: {
+        previousReading,
+      },
+    });
+  } catch (error) {
+    console.error('Get previous meter reading error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to get previous meter reading. Please check room and meter reading data.',
+      errorCode: 'PREVIOUS_READING_FAILED',
+    });
+  }
+});
+
+// POST /api/landlord/invoices/calculate
+// Tính preview tổng tiền hóa đơn, không ghi DB.
+router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), async (req, res) => {
+  const {
+    roomID,
+    month,
+    year,
+    roomPrice,
+    prevElectricityIndex,
+    currentElectricityIndex,
+    prevWaterIndex,
+    currentWaterIndex,
+    serviceFees,
+    serviceUnitPrices,
+  } = req.body || {};
+
+  const parsedRoomID = Number(roomID);
+  const parsedMonth = Number(month);
+  const parsedYear = Number(year);
+
+  if (!Number.isInteger(parsedRoomID) || parsedRoomID <= 0) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'roomID is required.',
+      errorCode: 'INVALID_PAYLOAD',
+    });
+  }
+
+  if (!Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12 || !Number.isInteger(parsedYear)) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'month and year are required.',
+      errorCode: 'INVALID_PAYLOAD',
+    });
+  }
+
+  try {
+    const room = await db.getAsync('SELECT id, price FROM rooms WHERE id = ? AND landlord_id = ?', [parsedRoomID, req.user.id]);
+
+    if (!room) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Room not found.',
+        errorCode: 'ROOM_NOT_FOUND',
+      });
+    }
+
+    const previousReading = await getPreviousMeterReading(parsedRoomID, parsedMonth, parsedYear);
+
+    const resolvedPrevElectricity = prevElectricityIndex ?? previousReading?.electricityIndex ?? 0;
+    const resolvedPrevWater = prevWaterIndex ?? previousReading?.waterIndex ?? 0;
+
+    const invoiceResult = calculateInvoiceTotal({
+      roomPrice: roomPrice ?? room.price,
+      prevElectricityIndex: resolvedPrevElectricity,
+      currentElectricityIndex,
+      prevWaterIndex: resolvedPrevWater,
+      currentWaterIndex,
+      serviceFees,
+      serviceUnitPrices,
+    });
+
+    return res.json({
+      status: 'success',
+      data: {
+        roomID: parsedRoomID,
+        month: parsedMonth,
+        year: parsedYear,
+        previousReading,
+        resolvedPreviousIndexes: {
+          prevElectricityIndex: resolvedPrevElectricity,
+          prevWaterIndex: resolvedPrevWater,
+        },
+        ...invoiceResult,
+      },
+    });
+  } catch (error) {
+    if (error instanceof BillingValidationError) {
+      return res.status(400).json({
+        status: 'error',
+        message: error.message,
+        errorCode: error.code,
+        details: error.details,
+      });
+    }
+
+    if (error instanceof ServicePricingConfigError) {
+      return res.status(400).json({
+        status: 'error',
+        message: `${error.message} Please review service price settings.`,
+        errorCode: error.code,
+        missingFields: error.missingFields,
+      });
+    }
+
+    console.error('Invoice calculation error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Invoice calculation failed. Please verify service pricing configuration.',
+      errorCode: 'INVOICE_CALCULATION_FAILED',
     });
   }
 });
