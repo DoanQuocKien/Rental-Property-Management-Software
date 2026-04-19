@@ -292,10 +292,19 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
   const month = Number(req.query.month);
   const year = Number(req.query.year);
 
-  if (!Number.isInteger(roomID) || roomID <= 0 || !Number.isInteger(month) || !Number.isInteger(year)) {
+  if (
+    !Number.isInteger(roomID) ||
+    roomID <= 0 ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12 ||
+    !Number.isInteger(year) ||
+    year < 2000 ||
+    year > 9999
+  ) {
     return res.status(400).json({
       status: 'error',
-      message: 'roomID, month and year are required and must be valid numbers.',
+      message: 'roomID must be a positive integer, month must be between 1 and 12, and year must be between 2000 and 9999.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
