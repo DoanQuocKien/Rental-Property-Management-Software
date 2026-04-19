@@ -329,10 +329,18 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
       },
     });
   } catch (error) {
+    if (error?.message === 'Invalid month/year.' || error?.message === 'Invalid roomID.') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'roomID must be a positive integer, month must be between 1 and 12, and year must be between 2000 and 9999.',
+        errorCode: 'INVALID_PAYLOAD',
+      });
+    }
+
     console.error('Get previous meter reading error:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to get previous meter reading. Please check service pricing setup and meter data.',
+      message: 'Failed to get previous meter reading. Please check room and meter reading data.',
       errorCode: 'PREVIOUS_READING_FAILED',
     });
   }

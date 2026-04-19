@@ -529,6 +529,15 @@ describe('Landlord Billing API', () => {
       expect(res.body.data.previousReading.electricityIndex).toBe(120);
       expect(res.body.data.previousReading.waterIndex).toBe(60);
     });
+
+    it('should return 400 when month/year is outside valid range', async () => {
+      const res = await request(app)
+        .get(`/api/landlord/rooms/${roomId}/previous-reading?month=13&year=1999`)
+        .set('Authorization', `Bearer ${landlordToken}`);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.errorCode).toBe('INVALID_PAYLOAD');
+    });
   });
 
   describe('POST /api/landlord/invoices/calculate', () => {
