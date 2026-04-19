@@ -125,7 +125,13 @@ router.get('/invoices/:id', authenticateToken, requireRole('tenant'), (req, res)
      FROM invoices i
      JOIN lease_contracts lc ON i.contract_id = lc.id
      JOIN rooms r ON lc.room_id = r.id
-     LEFT JOIN meter_readings mr ON mr.invoice_id = i.id
+     LEFT JOIN meter_readings mr ON mr.id = (
+       SELECT mr2.id
+       FROM meter_readings mr2
+       WHERE mr2.invoice_id = i.id
+       ORDER BY mr2.id DESC
+       LIMIT 1
+     )
      WHERE i.id = ? AND lc.tenant_id = ?`,
     [req.params.id, req.user.id],
     (err, invoice) => {

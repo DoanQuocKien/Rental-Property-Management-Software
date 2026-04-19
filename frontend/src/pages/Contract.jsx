@@ -64,7 +64,7 @@ function ContractPreview({ form, selectedRoom, selectedTenant }) {
         <p style={{ marginBottom: 16 }}>Chúng tôi gồm có:</p>
 
         {/* Bên A */}
-        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 20px', marginBottom: 16 }}>
+        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '12px 20px', marginBottom: 16 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>BÊN CHO THUÊ (Bên A):</div>
           <table><tbody>
             <tr><td style={{ padding: '3px 0', color: '#666', width: 200 }}>Họ và tên:</td><td><strong>{form.landlord_name || '___'}</strong></td></tr>
@@ -75,7 +75,7 @@ function ContractPreview({ form, selectedRoom, selectedTenant }) {
         </div>
 
         {/* Bên B */}
-        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 20px', marginBottom: 16 }}>
+        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '16px 20px', marginBottom: 16 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>BÊN THUÊ (Bên B):</div>
           <table><tbody>
             <tr><td style={{ padding: '3px 0', color: '#666', width: 200 }}>Họ và tên:</td><td><strong>{selectedTenant?.fullName || selectedTenant?.name || '___'}</strong></td></tr>
@@ -85,7 +85,7 @@ function ContractPreview({ form, selectedRoom, selectedTenant }) {
           </tbody></table>
         </div>
 
-        <p style={{ marginBottom: 16 }}>Hai bên thỏa 6thuận ký kết hợp đồng với các điều khoản sau:</p>
+        <p style={{ marginBottom: 16 }}>Hai bên thỏa thuận ký kết hợp đồng với các điều khoản sau:</p>
 
         {/* Điều 1 */}
         <div style={{ marginBottom: 20 }}>
@@ -194,7 +194,7 @@ export default function Contract() {
     room_id: '',
     tenant_id: '',
     rental_price: '',
-    deposit: '0',
+    deposit: '',
     electricity_price: '',
     water_price: '',
     start_date: today,

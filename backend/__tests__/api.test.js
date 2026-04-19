@@ -33,8 +33,9 @@ describe('Authentication API', () => {
         role: 'tenant'
       });
       expect(res.statusCode).toBe(201);
-      expect(res.body).toHaveProperty('token');
-      expect(res.body).toHaveProperty('refreshToken');
+      expect(res.body).not.toHaveProperty('token');
+      expect(res.body).not.toHaveProperty('refreshToken');
+      expect(res.body.user.status).toBe('pending');
       expect(res.body.user.role).toBe('tenant');
     });
 
@@ -162,7 +163,7 @@ describe('Authentication API', () => {
   describe('POST /api/auth/refresh', () => {
     it('should rotate refresh token and issue new access token', async () => {
       const loginRes = await request(app).post('/api/auth/login').send({
-        email: 'tenant@test.com',
+        email: 'landlord@test.com',
         password: 'password123'
       });
       const oldRefreshToken = loginRes.body.refreshToken;
@@ -211,7 +212,7 @@ describe('Authentication API', () => {
 
     it('should revoke a refresh token explicitly', async () => {
       const loginRes = await request(app).post('/api/auth/login').send({
-        email: 'tenant@test.com',
+        email: 'landlord@test.com',
         password: 'password123'
       });
 
@@ -465,6 +466,157 @@ describe('Rooms API', () => {
         .delete('/api/rooms/99999')
         .set('Authorization', `Bearer ${landlordToken}`);
       expect(res.statusCode).toBe(404);
+    });
+  });
+});
+
+describe('Landlord Billing API', () => {
+  let landlordToken;
+  let roomId;
+
+  beforeAll(async () => {
+    await request(app).post('/api/auth/register').send({
+      name: 'Billing Tenant',
+      email: 'billing-tenant@test.com',
+      password: 'password123',
+      role: 'tenant'
+    });
+
+    await request(app).post('/api/auth/register').send({
+      name: 'Billing Landlord',
+      email: 'billing-landlord@test.com',
+      password: 'password123',
+      role: 'landlord'
+    });
+
+    const landlordRes = await request(app).post('/api/auth/login').send({
+      email: 'billing-landlord@test.com',
+      password: 'password123'
+    });
+    landlordToken = landlordRes.body.token;
+
+    const roomRes = await request(app)
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${landlordToken}`)
+      .send({
+        name: 'Billing Room 301',
+        description: 'Room used for billing API tests',
+        price: 2500000,
+        area: 30,
+        capacity: 2,
+        status: 'available'
+      });
+
+    roomId = roomRes.body.room.id;
+
+    await db.runAsync(
+      `INSERT INTO meter_readings
+       (room_id, electricity_index, water_index, prev_electricity_index, prev_water_index, recorded_date)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [roomId, 120, 60, 0, 0, '2026-03-31']
+    );
+  });
+
+  describe('GET /api/landlord/rooms/:roomID/previous-reading', () => {
+    it('should return previous month reading when available', async () => {
+      const res = await request(app)
+        .get(`/api/landlord/rooms/${roomId}/previous-reading?month=4&year=2026`)
+        .set('Authorization', `Bearer ${landlordToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data.previousReading).toBeTruthy();
+      expect(res.body.data.previousReading.electricityIndex).toBe(120);
+      expect(res.body.data.previousReading.waterIndex).toBe(60);
+    });
+
+    it('should return 400 when month/year is outside valid range', async () => {
+      const res = await request(app)
+        .get(`/api/landlord/rooms/${roomId}/previous-reading?month=13&year=1999`)
+        .set('Authorization', `Bearer ${landlordToken}`);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.errorCode).toBe('INVALID_PAYLOAD');
+    });
+  });
+
+  describe('POST /api/landlord/invoices/calculate', () => {
+    it('should calculate invoice total using previous reading from DB', async () => {
+      const res = await request(app)
+        .post('/api/landlord/invoices/calculate')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          roomID: roomId,
+          month: 4,
+          year: 2026,
+          currentElectricityIndex: 150,
+          currentWaterIndex: 70,
+          serviceFees: {
+            wifiFee: 100000,
+            trashFee: 50000
+          },
+          serviceUnitPrices: {
+            electricityUnitPrice: 4000,
+            waterUnitPrice: 15000
+          }
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data.resolvedPreviousIndexes.prevElectricityIndex).toBe(120);
+      expect(res.body.data.resolvedPreviousIndexes.prevWaterIndex).toBe(60);
+      expect(res.body.data.breakdown.electricityUsage).toBe(30);
+      expect(res.body.data.breakdown.waterUsage).toBe(10);
+      expect(res.body.data.totalAmount).toBe(2920000);
+    });
+
+    it('should return validation error when current index is lower than previous index', async () => {
+      const res = await request(app)
+        .post('/api/landlord/invoices/calculate')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          roomID: roomId,
+          month: 4,
+          year: 2026,
+          currentElectricityIndex: 100,
+          currentWaterIndex: 70,
+          serviceFees: {
+            wifiFee: 100000,
+            trashFee: 50000
+          },
+          serviceUnitPrices: {
+            electricityUnitPrice: 4000,
+            waterUnitPrice: 15000
+          }
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.errorCode).toBe('BILLING_VALIDATION_ERROR');
+    });
+
+    it('should return config error when service unit prices are missing', async () => {
+      const res = await request(app)
+        .post('/api/landlord/invoices/calculate')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          roomID: roomId,
+          month: 4,
+          year: 2026,
+          currentElectricityIndex: 150,
+          currentWaterIndex: 70,
+          serviceFees: {
+            wifiFee: 100000,
+            trashFee: 50000
+          },
+          serviceUnitPrices: {
+            electricityUnitPrice: 4000
+          }
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.errorCode).toBe('SERVICE_PRICE_CONFIG_MISSING');
+      expect(Array.isArray(res.body.missingFields)).toBe(true);
+      expect(res.body.missingFields).toContain('waterUnitPrice');
     });
   });
 });
