@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Contract from './pages/Contract';
 import ManagerMeterReading from './pages/ManagerMeterReading';
 import ManagerMaintenance from './pages/ManagerMaintenance';
+import TenantApproval from './pages/TenantApproval';
 
 // --- 3. IMPORT TRANG NGƯỜI THUÊ (TENANT) ---
 import TenantDashboard from './pages/tenant/TenantDashboard';
@@ -32,14 +33,8 @@ function App() {
   return (
     <Routes>
       {/* KHÔNG DÙNG LAYOUT: TRANG LOGIN/REGISTER */}
-      <Route
-        path="/login"
-        element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Login />}
-      />
-      <Route
-        path="/register"
-        element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Register />}
-      />
+      <Route path="/login" element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Login />}/>
+      <Route path="/register" element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Register />}/>
 
       {/* NHÓM 1: CÁC TUYẾN ĐƯỜNG CHO CHỦ TRỌ (LANDLORD) */}
       <Route path="/landlord" element={<ProtectedRoute role="landlord"><MainLayout title="Tổng quan hệ thống"><Overview /></MainLayout></ProtectedRoute>} />
@@ -50,6 +45,7 @@ function App() {
       <Route path="/contract" element={<ProtectedRoute role="landlord"><MainLayout title="Hợp đồng điện tử"><Contract /></MainLayout></ProtectedRoute>} />
       <Route path="/meter-reading" element={<ProtectedRoute role="landlord"><MainLayout title="Ghi chỉ số điện nước"><ManagerMeterReading/></MainLayout></ProtectedRoute>} />
       <Route path="/maintenance" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý bảo trì"><ManagerMaintenance /></MainLayout></ProtectedRoute>} />
+      <Route path="/tenant-approval" element={<ProtectedRoute role="landlord"><MainLayout title="Phê duyệt tài khoản"><TenantApproval /></MainLayout></ProtectedRoute>} />
 
       {/* NHÓM 2: CÁC TUYẾN ĐƯỜNG CHO NGƯỜI THUÊ (TENANT) */}
       {/* Lưu ý: Đã bọc MainLayout để người thuê cũng có Sidebar/Navbar chuyên nghiệp */}
