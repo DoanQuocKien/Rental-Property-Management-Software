@@ -107,6 +107,46 @@ router.post('/', authenticateToken, upload.single('issuePhoto'), async (req, res
   }
 });
 
+// PUT /api/maintenance-requests/:id/status
+router.put('/:id/status', authenticateToken, async (req, res) => {
+  const reqId = Number(req.params.id);
+  if (!Number.isInteger(reqId)) {
+    return res.status(400).json({ status: 'error', message: 'Invalid ID' });
+  }
+
+  const { status, resolutionNote, staffId } = req.body;
+  if (!status) {
+    return res.status(400).json({ status: 'error', message: 'Status is required.' });
+  }
+
+  try {
+    const existing = await db.getAsync(`SELECT id FROM maintenance_requests WHERE id = ?`, [reqId]);
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Maintenance request not found.' });
+    }
+
+    if (req.user.role.toLowerCase() === 'tenant') {
+      return res.status(403).json({ status: 'error', message: 'Only managers or landlords can update the status.' });
+    }
+    
+    await db.runAsync(
+      `UPDATE maintenance_requests 
+       SET status = ?,
+           resolution_note = COALESCE(?, resolution_note),
+           staff_id = COALESCE(?, staff_id),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [status, resolutionNote, staffId, reqId]
+    );
+
+    const updated = await db.getAsync(`SELECT id, status, resolution_note, staff_id, updated_at FROM maintenance_requests WHERE id = ?`, [reqId]);
+    return res.json({ status: 'success', message: 'Status updated successfully.', data: updated });
+  } catch (error) {
+    console.error('Update status error:', error);
+    return res.status(500).json({ status: 'error', message: 'Failed to update status.' });
+  }
+});
+
 // PUT /api/maintenance-requests/:id
 router.put('/:id', authenticateToken, upload.single('issuePhoto'), async (req, res) => {
   const reqId = Number(req.params.id);
