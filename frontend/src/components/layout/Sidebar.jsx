@@ -16,6 +16,8 @@ export default function Sidebar() {
     { path: '/invoices', icon: '💰', label: 'Hóa đơn' },
     { path: '/contract', icon: '📝', label: 'Tạo hợp đồng' },
     { path: '/settings', icon: '⚙️', label: 'Cài đặt' },
+    { path: '/meter-reading', icon: '⚡', label: 'Ghi điện nước' },
+    { path: '/maintenance', icon: '🔧', label: 'Bảo trì' },
   ];
 
   // 2. Menu cho Người thuê (Tenant)

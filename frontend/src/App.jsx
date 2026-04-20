@@ -12,6 +12,8 @@ import Tenants from './pages/Tenants';
 import Invoices from './pages/Invoices';
 import Settings from './pages/Settings';
 import Contract from './pages/Contract';
+import ManagerMeterReading from './pages/ManagerMeterReading';
+import ManagerMaintenance from './pages/ManagerMaintenance';
 
 // --- 3. IMPORT TRANG NGƯỜI THUÊ (TENANT) ---
 import TenantDashboard from './pages/tenant/TenantDashboard';
@@ -46,6 +48,8 @@ function App() {
       <Route path="/invoices" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý hóa đơn"><Invoices /></MainLayout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute role="landlord"><MainLayout title="Cài đặt hệ thống"><Settings /></MainLayout></ProtectedRoute>} />
       <Route path="/contract" element={<ProtectedRoute role="landlord"><MainLayout title="Hợp đồng điện tử"><Contract /></MainLayout></ProtectedRoute>} />
+      <Route path="/meter-reading" element={<ProtectedRoute role="landlord"><MainLayout title="Ghi chỉ số điện nước"><ManagerMeterReading/></MainLayout></ProtectedRoute>} />
+      <Route path="/maintenance" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý bảo trì"><ManagerMaintenance /></MainLayout></ProtectedRoute>} />
 
       {/* NHÓM 2: CÁC TUYẾN ĐƯỜNG CHO NGƯỜI THUÊ (TENANT) */}
       {/* Lưu ý: Đã bọc MainLayout để người thuê cũng có Sidebar/Navbar chuyên nghiệp */}

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import api from '../../api';
+import NotificationBell from '../../components/NotificationBell';
 
 // ── Notification Bell (real data) ─────────────────────────────────────────────
 function NotificationBell() {
@@ -437,7 +438,7 @@ export default function TenantLayout({ children, title, subtitle }) {
           </div>
           <div className="navbar-actions">
             {/* Real notification bell */}
-            <NotificationBell />
+            <NotificationBell role="tenant" />
 
             <div className="user-profile">
               <div className="user-info">
