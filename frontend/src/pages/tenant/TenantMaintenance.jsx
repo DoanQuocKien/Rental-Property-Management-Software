@@ -1,35 +1,54 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
 
-const CATEGORIES = [
-  { id: 'electrical', icon: '⚡', label: 'Điện' },
-  { id: 'plumbing', icon: '💧', label: 'Nước' },
-  { id: 'air_conditioning', icon: '❄️', label: 'Máy lạnh' },
-  { id: 'furniture', icon: '🛋️', label: 'Nội thất' },
-  { id: 'internet', icon: '📶', label: 'Wifi' },
-  { id: 'general', icon: '🔧', label: 'Khác' },
-];
-
-const STATUS_CONFIG = {
-  pending: { label: 'Chờ xử lý', bg: '#fffbeb', color: '#d69e2e', icon: '⏳' },
-  in_progress: { label: 'Đang sửa', bg: '#ebf4ff', color: '#3182ce', icon: '🔨' },
-  completed: { label: 'Hoàn thành', bg: '#e6fffa', color: '#38b2ac', icon: '✅' },
-  cancelled: { label: 'Đã hủy', bg: '#f7fafc', color: '#718096', icon: '❌' },
+// --- HỆ THỐNG SVG ICONS (KHÔNG DÙNG ẢNH NGOÀI) ---
+const Icons = {
+  electrical: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+  ),
+  plumbing: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+  ),
+  air_con: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+  ),
+  furniture: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/><path d="M2 14h20"/><path d="M6 12V6"/><path d="M18 12V6"/></svg>
+  ),
+  wifi: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+  ),
+  general: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+  ),
+  clock: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  ),
+  send: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+  )
 };
+
+const CATEGORIES = [
+  { id: 'electrical', icon: <Icons.electrical />, label: 'Điện' },
+  { id: 'plumbing', icon: <Icons.plumbing />, label: 'Nước' },
+  { id: 'air_conditioning', icon: <Icons.air_con />, label: 'Máy lạnh' },
+  { id: 'furniture', icon: <Icons.furniture />, label: 'Nội thất' },
+  { id: 'internet', icon: <Icons.wifi />, label: 'Wifi' },
+  { id: 'general', icon: <Icons.general />, label: 'Khác' },
+];
 
 export default function TenantMaintenance() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ description: '', category: 'general' });
-  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState('all');
 
-  // Màu chủ đạo của Người thuê
   const tenantColor = '#2d6a4f';
 
   const fetchRequests = async () => {
-    setLoading(true);
     try {
       const res = await api.get('/tenants/maintenance');
       setRequests(res.data.requests || []);
@@ -41,43 +60,54 @@ export default function TenantMaintenance() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitLoading(true);
+    if (!form.description.trim()) {
+      alert('Vui lòng nhập mô tả sự cố!');
+      return;
+    }
+
+    setSubmitting(true);
     try {
       await api.post('/tenants/maintenance', form);
-      alert('Đã gửi yêu cầu thành công! Kỹ thuật viên sẽ sớm liên hệ.');
-      setShowForm(false);
+      alert('Gửi yêu cầu thành công! ✨');
       setForm({ description: '', category: 'general' });
+      setShowForm(false);
       fetchRequests();
-    } catch { alert('Gửi yêu cầu thất bại'); }
-    finally { setSubmitLoading(false); }
+    } catch { alert('Gửi yêu cầu thất bại.'); }
+    finally { setSubmitting(false); }
   };
 
   const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
 
   return (
     <div className="maintenance-container">
-      {/* 1. Header & Nút gửi yêu cầu */}
+      {/* 1. Header & Nút tạo mới */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h2 style={{ fontSize: '1.6rem', color: '#2d3748' }}>Báo cáo sự cố</h2>
-          <p style={{ color: '#718096' }}>Gửi yêu cầu sửa chữa trang thiết bị trong phòng</p>
+          <h2 style={{ fontSize: '1.6rem', color: '#2d3748', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Icons.general /> Báo cáo sự cố
+          </h2>
+          <p style={{ color: '#718096' }}>Gửi yêu cầu sửa chữa trang thiết bị</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          style={{ background: tenantColor, color: 'white', padding: '12px 24px', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+          style={{ background: tenantColor, color: 'white', padding: '12px 24px', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
         >
-          + Gửi yêu cầu mới
+          + Tạo yêu cầu mới
         </button>
       </div>
 
-      {/* 2. Bộ lọc (Tabs) */}
-      <div className="tab-group" style={{ marginBottom: '20px' }}>
-        {[['all', 'Tất cả'], ['pending', 'Chờ xử lý'], ['in_progress', 'Đang sửa'], ['completed', 'Xong']].map(([key, label]) => (
+      {/* 2. Bộ lọc Tabs */}
+      <div className="tab-group" style={{ marginBottom: '20px', borderBottom: '1px solid #eee' }}>
+        {[['all', 'Tất cả'], ['pending', 'Chờ xử lý'], ['completed', 'Đã xong']].map(([key, label]) => (
           <button
             key={key}
-            className={`tab-item ${filter === key ? 'active' : ''}`}
             onClick={() => setFilter(key)}
-            style={{ borderColor: filter === key ? tenantColor : 'transparent', color: filter === key ? tenantColor : '#666' }}
+            style={{
+              padding: '10px 20px', border: 'none', background: 'none', cursor: 'pointer',
+              color: filter === key ? tenantColor : '#718096',
+              borderBottom: filter === key ? `3px solid ${tenantColor}` : '3px solid transparent',
+              fontWeight: filter === key ? 'bold' : 'normal'
+            }}
           >
             {label}
           </button>
@@ -85,63 +115,59 @@ export default function TenantMaintenance() {
       </div>
 
       {/* 3. Danh sách yêu cầu */}
-      {loading ? <p>Đang tải dữ liệu...</p> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {filtered.length === 0 ? (
-            <div className="content-card" style={{ textAlign: 'center', padding: '40px' }}>Bạn chưa có yêu cầu nào trong mục này.</div>
-          ) : (
-            filtered.map(req => {
-              const sc = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending;
-              const cat = CATEGORIES.find(c => c.id === req.category) || CATEGORIES[5];
-              return (
-                <div key={req.id} className="content-card" style={{ borderLeft: `5px solid ${sc.color}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1.8rem' }}>{cat.icon}</span>
-                      <div>
-                        <div style={{ fontWeight: 'bold', color: '#333' }}>{cat.label}</div>
-                        <div style={{ fontSize: '0.9rem', color: '#555' }}>{req.description}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '5px' }}>📅 {new Date(req.created_at).toLocaleString('vi-VN')}</div>
-                      </div>
-                    </div>
-                    <span style={{ background: sc.bg, color: sc.color, padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                      {sc.icon} {sc.label}
-                    </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        {loading ? <p>Đang tải...</p> : (
+          filtered.length > 0 ? filtered.map(req => {
+            const cat = CATEGORIES.find(c => c.id === req.category) || CATEGORIES[5];
+            return (
+              <div key={req.id} className="content-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                  <div style={{ color: tenantColor, background: '#f0fff4', padding: '10px', borderRadius: '10px' }}>
+                    {cat.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 'bold' }}>{cat.label}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#4a5568' }}>{req.description}</div>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
-      )}
+                <div style={{ fontSize: '0.8rem', color: '#a0aec0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Icons.clock /> {new Date(req.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            );
+          }) : <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>Chưa có dữ liệu.</p>
+        )}
+      </div>
 
-      {/* 4. Modal Gửi yêu cầu (Chỉ hiện khi nhấn nút) */}
+      {/* 4. Modal Form */}
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <h3 style={{ marginBottom: '20px' }}>🛠️ Gửi yêu cầu sửa chữa</h3>
+            <h3 style={{ marginBottom: '20px' }}>🛠️ Gửi yêu cầu mới</h3>
 
-            <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Chọn loại sự cố:</label>
+            <label style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Loại sự cố:</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', margin: '15px 0' }}>
               {CATEGORIES.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setForm({...form, category: cat.id})}
                   style={{
-                    padding: '10px', borderRadius: '8px',
-                    border: form.category === cat.id ? `2px solid ${tenantColor}` : '1px solid #ddd',
-                    background: form.category === cat.id ? '#f0fff4' : 'white'
+                    padding: '10px', borderRadius: '10px', border: '1px solid',
+                    borderColor: form.category === cat.id ? tenantColor : '#ddd',
+                    background: form.category === cat.id ? '#f0fff4' : 'white',
+                    color: form.category === cat.id ? tenantColor : '#4a5568',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', cursor: 'pointer'
                   }}
                 >
-                  {cat.icon} {cat.label}
+                  {cat.icon} <span style={{ fontSize: '0.75rem' }}>{cat.label}</span>
                 </button>
               ))}
             </div>
 
-            <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Mô tả chi tiết:</label>
+            <label style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Mô tả chi tiết: *</label>
             <textarea
-              style={{ width: '100%', padding: '10px', marginTop: '10px', borderRadius: '8px', border: '1px solid #ddd', minHeight: '100px' }}
-              placeholder="Ví dụ: Vòi nước bị rò rỉ, cần sửa gấp..."
+              style={{ width: '100%', padding: '12px', marginTop: '10px', borderRadius: '10px', border: '1px solid #ddd', minHeight: '100px', outline: 'none' }}
+              placeholder="Mô tả vấn đề bạn đang gặp phải..."
               value={form.description}
               onChange={e => setForm({...form, description: e.target.value})}
             />
@@ -150,10 +176,10 @@ export default function TenantMaintenance() {
               <button onClick={() => setShowForm(false)} className="btn-secondary" style={{ flex: 1 }}>Hủy</button>
               <button
                 onClick={handleSubmit}
-                disabled={submitLoading}
-                style={{ flex: 2, background: tenantColor, color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
+                disabled={submitting}
+                style={{ flex: 2, background: tenantColor, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                {submitLoading ? 'Đang gửi...' : '📤 Gửi yêu cầu'}
+                {submitting ? 'Đang gửi...' : <><Icons.send /> Gửi báo cáo</>}
               </button>
             </div>
           </div>
