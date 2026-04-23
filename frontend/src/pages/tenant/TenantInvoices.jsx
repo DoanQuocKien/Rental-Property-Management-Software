@@ -15,6 +15,7 @@ export default function TenantInvoices() {
   const [payMethod, setPayMethod] = useState('');
   const [payLoading, setPayLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedLoading, setSelectedLoading] = useState(false);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -40,6 +41,19 @@ export default function TenantInvoices() {
       fetchInvoices();
     } catch { alert('Thanh toán thất bại, vui lòng thử lại.'); }
     finally { setPayLoading(false); }
+  };
+
+  const handleOpenInvoice = async (invoice) => {
+    setSelectedInvoice(invoice);
+    setSelectedLoading(true);
+    try {
+      const res = await api.get(`/tenants/invoices/${invoice.id}`);
+      setSelectedInvoice(res.data.invoice || invoice);
+    } catch {
+      setSelectedInvoice(invoice);
+    } finally {
+      setSelectedLoading(false);
+    }
   };
 
   return (
@@ -93,9 +107,9 @@ export default function TenantInvoices() {
                     </span>
                   </td>
                   <td>
-                    <button onClick={() => setSelectedInvoice(inv)} style={{ marginRight: '10px', color: '#667eea', border: 'none', background: 'none', cursor: 'pointer' }}>Chi tiết</button>
+                    <button type="button" onClick={() => handleOpenInvoice(inv)} style={{ marginRight: '10px', color: '#667eea', border: 'none', background: 'none', cursor: 'pointer' }}>Chi tiết</button>
                     {inv.status === 'unpaid' && (
-                      <button onClick={() => setPayingInvoice(inv)} style={{ color: '#38b2ac', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Thanh toán</button>
+                      <button type="button" onClick={() => setPayingInvoice(inv)} style={{ color: '#38b2ac', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Thanh toán</button>
                     )}
                   </td>
                 </tr>
@@ -118,6 +132,35 @@ export default function TenantInvoices() {
             <button onClick={handlePay} disabled={!payMethod || payLoading} className="btn-primary" style={{ width: '100%', background: '#2d6a4f' }}>
               {payLoading ? 'Đang xử lý...' : 'Xác nhận trả tiền'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {selectedInvoice && (
+        <div className="modal-overlay" onClick={() => setSelectedInvoice(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px', padding: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+              <h3 style={{ margin: 0 }}>Chi tiết hóa đơn</h3>
+              <button type="button" onClick={() => setSelectedInvoice(null)} style={{ border: 'none', background: 'none', fontSize: '1.4rem', cursor: 'pointer' }}>×</button>
+            </div>
+
+            {selectedLoading ? (
+              <p>Đang tải chi tiết...</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '10px', fontSize: '0.92rem' }}>
+                <div><strong>Kỳ hóa đơn:</strong> Tháng {selectedInvoice.month}/{selectedInvoice.year}</div>
+                <div><strong>Phòng:</strong> {selectedInvoice.room_name || selectedInvoice.roomName || 'N/A'}</div>
+                <div><strong>Tiền phòng:</strong> {Number(selectedInvoice.rent_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Tiền điện:</strong> {Number(selectedInvoice.electricity_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Tiền nước:</strong> {Number(selectedInvoice.water_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Phí dịch vụ:</strong> {Number(selectedInvoice.service_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Tổng tiền:</strong> {Number(selectedInvoice.total_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Hạn thanh toán:</strong> {selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString('vi-VN') : 'N/A'}</div>
+                <div><strong>Trạng thái:</strong> {(STATUS_MAP[selectedInvoice.status] || STATUS_MAP.unpaid).label}</div>
+                {selectedInvoice.payment_method && <div><strong>Phương thức:</strong> {selectedInvoice.payment_method}</div>}
+                {selectedInvoice.paid_at && <div><strong>Đã thanh toán lúc:</strong> {new Date(selectedInvoice.paid_at).toLocaleString('vi-VN')}</div>}
+              </div>
+            )}
           </div>
         </div>
       )}
