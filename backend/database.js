@@ -181,6 +181,7 @@ db.serialize(() => {
       water_amount REAL DEFAULT 0,
       service_amount REAL DEFAULT 0,
       total_amount REAL NOT NULL,
+      paid_amount REAL NOT NULL DEFAULT 0,
       payment_status TEXT NOT NULL DEFAULT 'Unpaid',
       status TEXT DEFAULT 'unpaid',
       due_date DATE NOT NULL,
@@ -204,6 +205,7 @@ db.serialize(() => {
   ensureColumn('invoices', 'electricity_amount', 'REAL DEFAULT 0');
   ensureColumn('invoices', 'water_amount', 'REAL DEFAULT 0');
   ensureColumn('invoices', 'service_amount', 'REAL DEFAULT 0');
+  ensureColumn('invoices', 'paid_amount', 'REAL NOT NULL DEFAULT 0');
   ensureColumn('invoices', 'status', "TEXT DEFAULT 'unpaid'");
   ensureColumn('invoices', 'payment_method', 'TEXT');
   ensureColumn('invoices', 'paid_at', 'DATETIME');
