@@ -16,14 +16,12 @@ export default function TenantDashboard() {
       setLoading(true);
       try {
         const [cRes, iRes, mRes] = await Promise.all([
-          // ĐÃ SỬA: Gọi đúng API /contracts/my-contract mà bạn vừa viết ở backend
-          api.get('/contracts/my-contract').catch(() => ({ data: { data: null } })),
+          api.get('/tenants/contract').catch(() => ({ data: { contract: null } })),
           api.get('/tenants/invoices').catch(() => ({ data: { invoices: [] } })),
           api.get('/tenants/maintenance').catch(() => ({ data: { requests: [] } })),
         ]);
 
-        // Lưu ý: data trả về từ API của bạn thường nằm trong object data
-        setContract(cRes.data.data || null);
+        setContract(cRes.data.contract || null);
         setInvoices(iRes.data.invoices || []);
         setMaintenanceList(mRes.data.requests || []);
       } catch (err) {

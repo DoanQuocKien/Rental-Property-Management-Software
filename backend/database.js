@@ -5,6 +5,10 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'rental.db');
 
 const db = new sqlite3.Database(DB_PATH);
 
+function buildDemoRoomName(letterIndex, numberIndex) {
+  return `${String.fromCharCode(65 + letterIndex)}${numberIndex}`;
+}
+
 function ensureColumn(tableName, columnName, columnDef) {
   db.all(`PRAGMA table_info(${tableName})`, (err, columns) => {
     if (err || !Array.isArray(columns)) {
@@ -264,6 +268,69 @@ db.serialize(() => {
   `);
 
   db.run('CREATE INDEX IF NOT EXISTS idx_revoked_access_expires_at ON revoked_access_tokens(expires_at)');
+
+  (async () => {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    try {
+      const roomCountRow = await db.getAsync('SELECT COUNT(*) AS count FROM rooms');
+      if (Number(roomCountRow?.count || 0) > 0) {
+        return;
+      }
+
+      const landlords = await db.allAsync(
+        `SELECT id
+         FROM users
+         WHERE role IN ('landlord', 'Owner', 'Manager')
+           AND status = 'active'`
+      );
+
+      if (!landlords.length) {
+        return;
+      }
+
+      const letters = Array.from({ length: 26 }, (_, index) => index);
+      const numbers = Array.from({ length: 21 }, (_, index) => index);
+
+      await db.runAsync('BEGIN TRANSACTION');
+
+      try {
+        for (const landlord of landlords) {
+          for (const letterIndex of letters) {
+            for (const numberIndex of numbers) {
+              const roomName = buildDemoRoomName(letterIndex, numberIndex);
+              const sequenceIndex = letterIndex * numbers.length + numberIndex;
+
+              await db.runAsync(
+                `INSERT INTO rooms (name, description, category, price, area, max_occupants, status, landlord_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  roomName,
+                  `Phòng trống mẫu ${roomName}`,
+                  'Demo',
+                  1200000 + sequenceIndex * 15000,
+                  12 + (numberIndex % 9) + (letterIndex % 4),
+                  1 + (numberIndex % 3 === 0 ? 1 : 0),
+                  'available',
+                  landlord.id,
+                ]
+              );
+            }
+          }
+        }
+
+        await db.runAsync('COMMIT');
+        console.log(`Seeded demo rooms for ${landlords.length} landlord account(s).`);
+      } catch (seedError) {
+        await db.runAsync('ROLLBACK').catch(() => {});
+        throw seedError;
+      }
+    } catch (seedError) {
+      console.error('Failed to seed demo rooms:', seedError);
+    }
+  })();
 });
 
 module.exports = db;
