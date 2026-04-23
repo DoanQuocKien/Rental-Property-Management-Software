@@ -32,6 +32,7 @@ export default function TenantInvoices() {
   const [payMethod, setPayMethod] = useState('');
   const [payLoading, setPayLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedLoading, setSelectedLoading] = useState(false);
 
   const tenantColor = '#2d6a4f';
 
@@ -60,6 +61,19 @@ export default function TenantInvoices() {
       fetchInvoices();
     } catch { alert('Thanh toán thất bại.'); }
     finally { setPayLoading(false); }
+  };
+
+  const handleOpenInvoice = async (invoice) => {
+    setSelectedInvoice(invoice);
+    setSelectedLoading(true);
+    try {
+      const res = await api.get(`/tenants/invoices/${invoice.id}`);
+      setSelectedInvoice(res.data.invoice || invoice);
+    } catch {
+      setSelectedInvoice(invoice);
+    } finally {
+      setSelectedLoading(false);
+    }
   };
 
   return (
@@ -126,11 +140,11 @@ export default function TenantInvoices() {
                   </span>
                 </td>
                 <td style={{ textAlign: 'right' }}>
-                  <button onClick={() => setSelectedInvoice(inv)} style={{ color: tenantColor, border: 'none', background: 'none', cursor: 'pointer', fontWeight: '600', marginRight: '15px' }}>
+                  <button type="button" onClick={() => handleOpenInvoice(inv)} style={{ color: tenantColor, border: 'none', background: 'none', cursor: 'pointer', fontWeight: '600', marginRight: '15px' }}>
                     <IconInfo /> Chi tiết
                   </button>
                   {inv.status === 'unpaid' && (
-                    <button onClick={() => setPayingInvoice(inv)} style={{ color: 'white', background: tenantColor, border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    <button type="button" onClick={() => setPayingInvoice(inv)} style={{ color: 'white', background: tenantColor, border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
                       Thanh toán
                     </button>
                   )}
@@ -141,25 +155,31 @@ export default function TenantInvoices() {
         </table>
       </div>
 
-      {/* --- LOGIC THIẾU: MODAL CHI TIẾT --- */}
       {selectedInvoice && (
         <div className="modal-overlay" onClick={() => setSelectedInvoice(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h3>📄 Chi tiết tháng {selectedInvoice.month}/{selectedInvoice.year}</h3>
-              <button onClick={() => setSelectedInvoice(null)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px', padding: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+              <h3 style={{ margin: 0 }}>Chi tiết hóa đơn</h3>
+              <button type="button" onClick={() => setSelectedInvoice(null)} style={{ border: 'none', background: 'none', fontSize: '1.4rem', cursor: 'pointer' }}>×</button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tiền phòng:</span> <strong>{Number(selectedInvoice.room_price || 0).toLocaleString()}đ</strong></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tiền điện:</span> <span>{Number(selectedInvoice.electricity_fee || 0).toLocaleString()}đ</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tiền nước:</span> <span>{Number(selectedInvoice.water_fee || 0).toLocaleString()}đ</span></div>
-              <hr style={{ border: 'none', borderTop: '1px dashed #ddd' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem' }}>
-                <strong>TỔNG CỘNG:</strong>
-                <strong style={{ color: '#e53e3e' }}>{Number(selectedInvoice.total_amount).toLocaleString()}đ</strong>
+
+            {selectedLoading ? (
+              <p>Đang tải chi tiết...</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '10px', fontSize: '0.92rem' }}>
+                <div><strong>Kỳ hóa đơn:</strong> Tháng {selectedInvoice.month}/{selectedInvoice.year}</div>
+                <div><strong>Phòng:</strong> {selectedInvoice.room_name || selectedInvoice.roomName || 'N/A'}</div>
+                <div><strong>Tiền phòng:</strong> {Number(selectedInvoice.rent_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Tiền điện:</strong> {Number(selectedInvoice.electricity_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Tiền nước:</strong> {Number(selectedInvoice.water_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Phí dịch vụ:</strong> {Number(selectedInvoice.service_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Tổng tiền:</strong> {Number(selectedInvoice.total_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Hạn thanh toán:</strong> {selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString('vi-VN') : 'N/A'}</div>
+                <div><strong>Trạng thái:</strong> {(STATUS_MAP[selectedInvoice.status] || STATUS_MAP.unpaid).label}</div>
+                {selectedInvoice.payment_method && <div><strong>Phương thức:</strong> {selectedInvoice.payment_method}</div>}
+                {selectedInvoice.paid_at && <div><strong>Đã thanh toán lúc:</strong> {new Date(selectedInvoice.paid_at).toLocaleString('vi-VN')}</div>}
               </div>
-            </div>
-            <button onClick={() => setSelectedInvoice(null)} className="btn-primary" style={{ width: '100%', marginTop: '20px', background: '#4a5568' }}>Đóng cửa sổ</button>
+            )}
           </div>
         </div>
       )}

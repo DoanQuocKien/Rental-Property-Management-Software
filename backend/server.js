@@ -17,10 +17,20 @@ const path = require('path');
 
 const app       = express();
 const isTestEnv = process.env.NODE_ENV === 'test';
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // ── CORS ─────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Origin not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -101,6 +111,7 @@ if (require.main === module) {
       // Đóng SQLite connection
       try {
         const db = require('./database');
+        db.stopBackgroundJobs();
         db.close((err) => {
           if (err) console.error('Error closing DB:', err.message);
           else console.log('SQLite connection closed.');

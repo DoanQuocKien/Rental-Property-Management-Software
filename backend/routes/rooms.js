@@ -5,6 +5,10 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 const router = express.Router();
 const VALID_ROOM_STATUSES = ['available', 'occupied', 'maintenance', 'reserved', 'cleaning'];
 
+function buildDemoRoomName(letterIndex, numberIndex) {
+  return `${String.fromCharCode(65 + letterIndex)}${numberIndex}`;
+}
+
 function mapRoomRecord(room) {
   const roomID = room.id;
   const maxOccupants = room.max_occupants || 1;
@@ -26,6 +30,80 @@ function mapRoomRecord(room) {
     landlord_name: room.landlord_name,
   };
 }
+
+// Tạo hàng loạt phòng trống mẫu cho landlord hiện tại.
+router.post('/seed-demo', authenticateToken, requireRole('landlord'), async (req, res) => {
+  const letters = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
+  const numbers = Array.from({ length: 21 }, (_, index) => index);
+
+  try {
+    const existingRooms = await db.allAsync(
+      `SELECT name
+       FROM rooms
+       WHERE landlord_id = ?`,
+      [req.user.id]
+    );
+
+    const existingNames = new Set(existingRooms.map((room) => room.name));
+    const roomsToInsert = [];
+
+    letters.forEach((_, letterIndex) => {
+      numbers.forEach((numberIndex) => {
+        const roomName = buildDemoRoomName(letterIndex, numberIndex);
+
+        if (existingNames.has(roomName)) {
+          return;
+        }
+
+        const sequentialIndex = letterIndex * numbers.length + numberIndex;
+        roomsToInsert.push({
+          name: roomName,
+          description: `Phòng trống mẫu ${roomName}`,
+          category: 'Demo',
+          price: 1200000 + sequentialIndex * 15000,
+          area: 12 + (numberIndex % 9) + (letterIndex % 4),
+          maxOccupants: 1 + (numberIndex % 3 === 0 ? 1 : 0),
+          status: 'available',
+        });
+      });
+    });
+
+    if (roomsToInsert.length === 0) {
+      return res.status(200).json({
+        message: 'Demo rooms already exist.',
+        createdCount: 0,
+      });
+    }
+
+    await db.runAsync('BEGIN TRANSACTION');
+
+    let createdCount = 0;
+    try {
+      for (const room of roomsToInsert) {
+        await db.runAsync(
+          `INSERT INTO rooms (name, description, category, price, area, max_occupants, status, landlord_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [room.name, room.description, room.category, room.price, room.area, room.maxOccupants, room.status, req.user.id]
+        );
+        createdCount += 1;
+      }
+
+      await db.runAsync('COMMIT');
+      return res.status(201).json({
+        message: `Created ${createdCount} demo rooms.`,
+        createdCount,
+      });
+    } catch (insertError) {
+      await db.runAsync('ROLLBACK').catch(() => {});
+      throw insertError;
+    }
+  } catch (error) {
+    console.error('Seed demo rooms error:', error);
+    return res.status(500).json({
+      error: 'Failed to create demo rooms',
+    });
+  }
+});
 
 // US4: View available rooms (accessible to landlords)
 router.get('/available', authenticateToken, requireRole('landlord'), (req, res) => {
