@@ -14,6 +14,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
+const POLLING_INTERVAL_MS = 60_000;
+
 // ── Type styling ──────────────────────────────────────────────────────────────
 const TYPE_STYLE = {
   urgent:  { bg: '#fff5f5', border: '#feb2b2', dot: '#e53e3e', accent: '#e53e3e', label: '#742a2a' },
@@ -342,7 +344,7 @@ export default function NotificationBell({ role = 'landlord' }) {
   // Load on mount + every 60s
   useEffect(() => {
     loadNotifs();
-    const interval = setInterval(loadNotifs, 60000);
+    const interval = setInterval(loadNotifs, POLLING_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [loadNotifs]);
 
