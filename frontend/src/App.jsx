@@ -12,6 +12,7 @@ import Tenants from './pages/Tenants';
 import Invoices from './pages/Invoices';
 import Settings from './pages/Settings';
 import Contract from './pages/Contract';
+import ContractDetail from './pages/ContractDetail';
 
 // --- 3. IMPORT TRANG NGƯỜI THUÊ (TENANT) ---
 import TenantDashboard from './pages/tenant/TenantDashboard';
@@ -46,6 +47,7 @@ function App() {
       <Route path="/invoices" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý hóa đơn"><Invoices /></MainLayout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute role="landlord"><MainLayout title="Cài đặt hệ thống"><Settings /></MainLayout></ProtectedRoute>} />
       <Route path="/contract" element={<ProtectedRoute role="landlord"><MainLayout title="Hợp đồng điện tử"><Contract /></MainLayout></ProtectedRoute>} />
+      <Route path="/contracts/:id" element={<ProtectedRoute><MainLayout title="Chi tiết hợp đồng"><ContractDetail /></MainLayout></ProtectedRoute>} />
 
       {/* NHÓM 2: CÁC TUYẾN ĐƯỜNG CHO NGƯỜI THUÊ (TENANT) */}
       {/* Lưu ý: Đã bọc MainLayout để người thuê cũng có Sidebar/Navbar chuyên nghiệp */}

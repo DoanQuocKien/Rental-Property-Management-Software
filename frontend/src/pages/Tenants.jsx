@@ -239,7 +239,9 @@ export default function Tenants() {
   const { query } = useSearch();
 
   const [tenants, setTenants] = useState([]);
+  const [allTenantAccounts, setAllTenantAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState(null);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
   const [toast, setToast] = useState('');
@@ -253,8 +255,13 @@ export default function Tenants() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get('/landlord/tenants');
-      setTenants(res.data.data || []);
+      const [activeRes, allRes] = await Promise.all([
+        api.get('/landlord/tenants'),
+        api.get('/landlord/tenants/all'),
+      ]);
+
+      setTenants(activeRes.data.data || []);
+      setAllTenantAccounts(allRes.data.data || []);
     } catch {
       setError('Không thể tải danh sách khách thuê. Vui lòng thử lại.');
     } finally {
@@ -263,6 +270,21 @@ export default function Tenants() {
   }, []);
 
   useEffect(() => { fetchTenants(); }, [fetchTenants]);
+
+  const pendingTenantAccounts = allTenantAccounts.filter((tenant) => String(tenant.status || '').toLowerCase() === 'pending');
+
+  const handleApproveTenant = async (tenantId) => {
+    setApprovingId(tenantId);
+    try {
+      await api.put(`/tenants/${tenantId}/status`, { status: 'active' });
+      showToast('✅ Đã phê duyệt khách thuê thành công!');
+      fetchTenants();
+    } catch (err) {
+      showToast('❌ ' + (err.response?.data?.error || err.response?.data?.message || 'Không thể phê duyệt')); 
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const handleTerminate = async (contractId) => {
     try {
@@ -311,6 +333,65 @@ export default function Tenants() {
         <StatCard icon="✅" value={tenants.filter(t => t.contractStatus === 'active').length} label="Hợp đồng active" accent="#38b2ac" />
         <StatCard icon="⚠️" value={expiringSoon} label="Sắp hết hạn (≤30 ngày)" accent="#d69e2e" />
       </div>
+
+      {pendingTenantAccounts.length > 0 && (
+        <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden', marginBottom: 24 }}>
+          <div style={{ padding: '18px 20px', borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: '#2d3748' }}>⏳ Khách thuê chờ phê duyệt</div>
+            <div style={{ fontSize: '0.82rem', color: '#a0aec0' }}>{pendingTenantAccounts.length} tài khoản</div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc' }}>
+                  {['Họ tên', 'Email', 'CCCD/CMND', 'Điện thoại', 'Trạng thái', 'Thao tác'].map((h) => (
+                    <th key={h} style={{
+                      padding: '12px 16px', textAlign: 'left', fontSize: '0.78rem',
+                      fontWeight: 700, color: '#718096', textTransform: 'uppercase',
+                      letterSpacing: '0.5px', borderBottom: '2px solid #f0f2f5',
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pendingTenantAccounts.map((tenant) => (
+                  <tr key={tenant.id} style={{ borderBottom: '1px solid #f7fafc' }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 700, color: '#2d3748' }}>{tenant.fullName || tenant.name || 'N/A'}</td>
+                    <td style={{ padding: '14px 16px', color: '#4a5568' }}>{tenant.email}</td>
+                    <td style={{ padding: '14px 16px', color: '#4a5568' }}>{tenant.citizenID || 'Chưa cập nhật'}</td>
+                    <td style={{ padding: '14px 16px', color: '#4a5568' }}>{tenant.phoneNumber || '—'}</td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <span style={{ background: '#fffbeb', color: '#d69e2e', padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700 }}>
+                        Chờ duyệt
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleApproveTenant(tenant.id)}
+                        disabled={approvingId === tenant.id}
+                        style={{
+                          background: approvingId === tenant.id ? '#a0aec0' : '#38b2ac',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 8,
+                          padding: '8px 14px',
+                          cursor: approvingId === tenant.id ? 'not-allowed' : 'pointer',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {approvingId === tenant.id ? 'Đang duyệt...' : 'Phê duyệt'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Bảng khách thuê */}
       <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>

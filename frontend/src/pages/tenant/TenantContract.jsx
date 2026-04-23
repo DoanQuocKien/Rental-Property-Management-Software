@@ -20,9 +20,8 @@ export default function TenantContract() {
     const fetchContract = async () => {
       setLoading(true);
       try {
-        // Gọi API lấy hợp đồng cá nhân
-        const res = await api.get('/contracts/my-contract');
-        setContract(res.data.data);
+        const res = await api.get('/tenants/contract');
+        setContract(res.data.contract || null);
       } catch (err) {
         console.error("Lỗi fetch hợp đồng:", err);
       } finally {
