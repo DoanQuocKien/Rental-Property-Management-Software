@@ -2,19 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSearch } from '../../context/SearchContext';
-
-const MOCK_NOTIFICATIONS = [
-  { id: 1, type: 'warning', icon: '⚠️', title: 'Hợp đồng sắp hết hạn', message: 'Phòng 105 — hết hạn trong 12 ngày', time: '5 phút trước', read: false },
-  { id: 2, type: 'error', icon: '🔧', title: 'Yêu cầu sửa chữa mới', message: 'Phòng 301 báo hỏng điều hòa', time: '30 phút trước', read: false },
-  { id: 3, type: 'success', icon: '💰', title: 'Thanh toán thành công', message: 'Phòng 202 đã thanh toán tiền tháng 4/2026', time: '2 giờ trước', read: false },
-];
-
-const typeColors = {
-  warning: { bg: '#fffbeb', border: '#f6e05e', dot: '#d69e2e' },
-  error:   { bg: '#fff5f5', border: '#feb2b2', dot: '#e53e3e' },
-  success: { bg: '#e6fffa', border: '#81e6d9', dot: '#38b2ac' },
-  info:    { bg: '#f0f4ff', border: '#c3dafe', dot: '#667eea' },
-};
+import NotificationBell from '../NotificationBell';
 
 // Các trang có thể tìm kiếm và placeholder tương ứng
 const SEARCH_PAGES = {
@@ -32,14 +20,10 @@ export default function Navbar() {
 
   const [inputValue, setInputValue] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
 
-  const dropdownRef = useRef(null);
   const searchRef = useRef(null);
   const inputRef = useRef(null);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
   // Lấy tên hiển thị và Role từ user thật
   const displayName = user?.fullName || user?.name || 'User';
   const userRole = user?.role === 'landlord' ? 'Chủ trọ' : 'Người thuê';
@@ -259,39 +243,8 @@ export default function Navbar() {
 
       <div className="navbar-actions">
         {/* Notification Bell */}
-        <div ref={dropdownRef} style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowNotifications(v => !v)}
-            className="notif-btn"
-            style={{
-              background: showNotifications ? '#f0f4ff' : 'transparent',
-              border: showNotifications ? '1px solid #c3dafe' : '1px solid transparent',
-              borderRadius: '10px', padding: '8px 10px', cursor: 'pointer',
-              position: 'relative', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', transition: 'all 0.2s', fontSize: '18px',
-            }}
-          >
-            🔔
-            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
-          </button>
+        <NotificationBell role="landlord" />
 
-          {showNotifications && (
-            <div className="notif-dropdown" style={{
-              position: 'absolute', top: '100%', right: 0, width: '320px', background: 'white',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)', borderRadius: '8px', zIndex: 100
-            }}>
-              <div style={{ padding: '10px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>Thông báo</div>
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {notifications.map(n => (
-                  <div key={n.id} style={{ padding: '10px', borderBottom: '1px solid #f9f9f9', fontSize: '0.85rem' }}>
-                    <strong>{n.title}</strong>
-                    <div style={{ color: '#666' }}>{n.message}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* User profile - Đã sửa lỗi Role và hiển thị */}
         <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
