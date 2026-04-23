@@ -269,6 +269,17 @@ db.serialize(() => {
 
   db.run('CREATE INDEX IF NOT EXISTS idx_revoked_access_expires_at ON revoked_access_tokens(expires_at)');
 
+  setInterval(() => {
+    db.run(
+      `DELETE FROM revoked_access_tokens WHERE expires_at < datetime('now')`,
+      (err) => { if (err) console.error('Cleanup revoked_access_tokens error:', err.message); }
+    );
+    db.run(
+      `DELETE FROM refresh_tokens WHERE revoked = 1 AND revoked_at < datetime('now', '-7 days')`,
+      (err) => { if (err) console.error('Cleanup refresh_tokens error:', err.message); }
+    );
+  }, 60 * 60 * 1000);
+
   (async () => {
     if (process.env.NODE_ENV === 'test') {
       return;
