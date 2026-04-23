@@ -23,6 +23,7 @@ import TenantInvoices from './pages/tenant/TenantInvoices';
 import TenantContract from './pages/tenant/TenantContract';
 import TenantMaintenance from './pages/tenant/TenantMaintenance';
 import TenantProfile from './pages/tenant/TenantProfile';
+import MockPayment from './pages/MockPayment';
 
 // --- 4. THÀNH PHẦN HỖ TRỢ ---
 import MainLayout from './components/layout/MainLayout';
@@ -36,6 +37,7 @@ function App() {
       {/* KHÔNG DÙNG LAYOUT: TRANG LOGIN/REGISTER */}
       <Route path="/login" element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Login />}/>
       <Route path="/register" element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Register />}/>
+      <Route path="/mock-payment" element={<MockPayment />} />
 
       {/* NHÓM 1: CÁC TUYẾN ĐƯỜNG CHO CHỦ TRỌ (LANDLORD) */}
       <Route path="/landlord" element={<ProtectedRoute role="landlord"><MainLayout title="Tổng quan hệ thống"><Overview /></MainLayout></ProtectedRoute>} />

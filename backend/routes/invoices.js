@@ -4,6 +4,11 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+function toMoneyNumber(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : NaN;
+}
+
 // ──────────────────────────────────────────────────────────
 // GET /api/invoices  — Danh sách hóa đơn của landlord
 // Query: ?roomID=&month=&year=&status=
@@ -177,7 +182,8 @@ router.put('/:id/pay', authenticateToken, requireRole('landlord'), async (req, r
     await db.runAsync(
       `UPDATE invoices
        SET status = 'paid', payment_status = 'Paid',
-           payment_method = ?, paid_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+           payment_method = ?, paid_amount = total_amount,
+           paid_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [payment_method, id]
     );
@@ -186,6 +192,112 @@ router.put('/:id/pay', authenticateToken, requireRole('landlord'), async (req, r
   } catch (err) {
     console.error('Pay invoice error:', err);
     return res.status(500).json({ status: 'error', message: 'Failed to update invoice.', errorCode: 'UPDATE_FAILED' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// GET /api/invoices/mock-payment/:id  — Public invoice data for mock payment page
+// ──────────────────────────────────────────────────────────
+router.get('/mock-payment/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ status: 'error', message: 'Invalid invoice ID.', errorCode: 'INVALID_PAYLOAD' });
+  }
+
+  try {
+    const invoice = await db.getAsync(
+      `SELECT id, month, year, total_amount, paid_amount, status, payment_status
+       FROM invoices
+       WHERE id = ?`,
+      [id]
+    );
+
+    if (!invoice) {
+      return res.status(404).json({ status: 'error', message: 'Invoice not found.', errorCode: 'NOT_FOUND' });
+    }
+
+    const totalAmount = toMoneyNumber(invoice.total_amount);
+    const paidAmount = toMoneyNumber(invoice.paid_amount || 0);
+    const remainingAmount = Math.max(0, totalAmount - paidAmount);
+
+    return res.json({
+      status: 'success',
+      data: {
+        ...invoice,
+        paid_amount: paidAmount,
+        remaining_amount: remainingAmount,
+      },
+    });
+  } catch (err) {
+    console.error('Get mock payment invoice error:', err);
+    return res.status(500).json({ status: 'error', message: 'Failed to fetch invoice.', errorCode: 'FETCH_FAILED' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// POST /api/invoices/mock-payment/confirm  — Public mock payment webhook-like endpoint
+// Body: { invoiceId, amount }
+// ──────────────────────────────────────────────────────────
+router.post('/mock-payment/confirm', async (req, res) => {
+  const invoiceId = Number(req.body?.invoiceId);
+  const amount = toMoneyNumber(req.body?.amount);
+
+  if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
+    return res.status(400).json({ status: 'error', message: 'invoiceId must be a positive integer.', errorCode: 'INVALID_PAYLOAD' });
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ status: 'error', message: 'amount must be a positive number.', errorCode: 'INVALID_PAYLOAD' });
+  }
+
+  try {
+    const invoice = await db.getAsync(
+      `SELECT id, total_amount, paid_amount, status
+       FROM invoices
+       WHERE id = ?`,
+      [invoiceId]
+    );
+
+    if (!invoice) {
+      return res.status(404).json({ status: 'error', message: 'Invoice not found.', errorCode: 'NOT_FOUND' });
+    }
+
+    const totalAmount = toMoneyNumber(invoice.total_amount);
+    const currentPaidAmount = toMoneyNumber(invoice.paid_amount || 0);
+
+    if (invoice.status === 'paid' || currentPaidAmount >= totalAmount) {
+      return res.status(400).json({ status: 'error', message: 'Invoice is already paid.', errorCode: 'ALREADY_PAID' });
+    }
+
+    const newPaidAmount = currentPaidAmount + amount;
+    const isPaidInFull = newPaidAmount >= totalAmount;
+    const nextStatus = isPaidInFull ? 'paid' : 'partial';
+    const nextPaymentStatus = isPaidInFull ? 'Paid' : 'Partial';
+
+    await db.runAsync(
+      `UPDATE invoices
+       SET status = ?,
+           payment_status = ?,
+           payment_method = 'Mock QR Transfer',
+           paid_amount = ?,
+           paid_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE paid_at END,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [nextStatus, nextPaymentStatus, newPaidAmount, isPaidInFull ? 1 : 0, invoiceId]
+    );
+
+    return res.json({
+      status: 'success',
+      message: isPaidInFull ? 'Invoice paid successfully.' : 'Partial payment recorded successfully.',
+      data: {
+        invoiceId,
+        paidAmount: newPaidAmount,
+        remainingAmount: Math.max(0, totalAmount - newPaidAmount),
+        invoiceStatus: nextStatus,
+      },
+    });
+  } catch (err) {
+    console.error('Mock payment confirm error:', err);
+    return res.status(500).json({ status: 'error', message: 'Failed to process mock payment.', errorCode: 'UPDATE_FAILED' });
   }
 });
 

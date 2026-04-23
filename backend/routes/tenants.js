@@ -158,7 +158,7 @@ router.post('/invoices/:id/pay', authenticateToken, requireRole('tenant'), (req,
 
       db.run(
         `UPDATE invoices SET status = 'paid', payment_method = ?, paid_at = CURRENT_TIMESTAMP,
-         updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+         payment_status = 'Paid', paid_amount = total_amount, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         [payment_method, req.params.id],
         function (err) {
           if (err) return res.status(500).json({ error: 'Thanh toán thất bại' });

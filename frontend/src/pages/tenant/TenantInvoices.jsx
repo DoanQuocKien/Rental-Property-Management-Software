@@ -21,16 +21,22 @@ const IconWallet = () => (
 const STATUS_MAP = {
   paid: { label: 'Đã thanh toán', icon: <IconCheck />, bg: '#e6fffa', color: '#2d6a4f' },
   unpaid: { label: 'Chưa thanh toán', icon: <IconAlert />, bg: '#fff5f5', color: '#e53e3e' },
+  partial: { label: 'Thanh toán một phần', icon: <IconAlert />, bg: '#fffbea', color: '#b7791f' },
   overdue: { label: 'Quá hạn', icon: <IconAlert />, bg: '#fffbeb', color: '#d69e2e' },
 };
+
+function getRemainingAmount(invoice) {
+  const total = Number(invoice?.total_amount || 0);
+  const paid = Number(invoice?.paid_amount || 0);
+  return Math.max(0, total - paid);
+}
 
 export default function TenantInvoices() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [payingInvoice, setPayingInvoice] = useState(null);
-  const [payMethod, setPayMethod] = useState('');
-  const [payLoading, setPayLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedLoading, setSelectedLoading] = useState(false);
 
@@ -47,20 +53,57 @@ export default function TenantInvoices() {
 
   useEffect(() => { fetchInvoices(); }, []);
 
-  const filtered = filter === 'all' ? invoices : invoices.filter(i => i.status === filter);
-  const totalUnpaid = invoices.filter(i => i.status === 'unpaid').reduce((s, i) => s + i.total_amount, 0);
-
-  const handlePay = async () => {
-    if (!payMethod) return;
-    setPayLoading(true);
-    try {
-      await api.post(`/tenants/invoices/${payingInvoice.id}/pay`, { payment_method: payMethod });
-      alert('Thanh toán thành công! 🎉');
-      setPayingInvoice(null);
-      setPayMethod('');
+  useEffect(() => {
+    const intervalId = setInterval(() => {
       fetchInvoices();
-    } catch { alert('Thanh toán thất bại.'); }
-    finally { setPayLoading(false); }
+    }, 12000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const paymentSuccess = query.get('paymentSuccess');
+
+    if (paymentSuccess === '1') {
+      const status = query.get('status');
+      const invoiceId = query.get('invoiceId');
+      if (status === 'paid') {
+        alert(`Thanh toán hóa đơn #${invoiceId || ''} thành công.`);
+      } else {
+        alert(`Đã ghi nhận thanh toán một phần cho hóa đơn #${invoiceId || ''}.`);
+      }
+      query.delete('paymentSuccess');
+      query.delete('status');
+      query.delete('invoiceId');
+
+      const newQuery = query.toString();
+      const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ''}`;
+      window.history.replaceState({}, '', newUrl);
+      fetchInvoices();
+    }
+  }, []);
+
+  const filtered = filter === 'all' ? invoices : invoices.filter(i => i.status === filter);
+  const totalUnpaid = invoices
+    .filter(i => i.status === 'unpaid' || i.status === 'partial')
+    .reduce((s, i) => s + getRemainingAmount(i), 0);
+
+  const buildMockPaymentLink = (invoice) => {
+    const amount = getRemainingAmount(invoice);
+    const base = `${window.location.origin}/mock-payment`;
+    const returnUrl = `${window.location.origin}/tenant/invoices`;
+    return `${base}?invoiceId=${invoice.id}&amount=${Math.round(amount)}&returnUrl=${encodeURIComponent(returnUrl)}`;
+  };
+
+  const handleCopyLink = async (invoice) => {
+    try {
+      await navigator.clipboard.writeText(buildMockPaymentLink(invoice));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
   };
 
   const handleOpenInvoice = async (invoice) => {
@@ -104,7 +147,7 @@ export default function TenantInvoices() {
       {/* 2. Danh sách */}
       <div className="content-card">
         <div className="tab-group" style={{ marginBottom: '20px' }}>
-          {[['all', 'Tất cả'], ['unpaid', 'Chưa TT'], ['paid', 'Đã TT']].map(([key, label]) => (
+          {[['all', 'Tất cả'], ['unpaid', 'Chưa TT'], ['partial', 'Một phần'], ['paid', 'Đã TT']].map(([key, label]) => (
             <button
               key={key}
               className={`tab-item ${filter === key ? 'active' : ''}`}
@@ -132,18 +175,18 @@ export default function TenantInvoices() {
                 <td>{Number(inv.total_amount).toLocaleString()}đ</td>
                 <td>
                   <span className="badge" style={{
-                    background: STATUS_MAP[inv.status]?.bg,
-                    color: STATUS_MAP[inv.status]?.color,
+                    background: (STATUS_MAP[inv.status] || STATUS_MAP.unpaid).bg,
+                    color: (STATUS_MAP[inv.status] || STATUS_MAP.unpaid).color,
                     display: 'inline-flex', alignItems: 'center', gap: '5px'
                   }}>
-                    {STATUS_MAP[inv.status]?.icon} {STATUS_MAP[inv.status]?.label}
+                    {(STATUS_MAP[inv.status] || STATUS_MAP.unpaid).icon} {(STATUS_MAP[inv.status] || STATUS_MAP.unpaid).label}
                   </span>
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <button type="button" onClick={() => handleOpenInvoice(inv)} style={{ color: tenantColor, border: 'none', background: 'none', cursor: 'pointer', fontWeight: '600', marginRight: '15px' }}>
                     <IconInfo /> Chi tiết
                   </button>
-                  {inv.status === 'unpaid' && (
+                  {(inv.status === 'unpaid' || inv.status === 'partial') && (
                     <button type="button" onClick={() => setPayingInvoice(inv)} style={{ color: 'white', background: tenantColor, border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
                       Thanh toán
                     </button>
@@ -174,6 +217,8 @@ export default function TenantInvoices() {
                 <div><strong>Tiền nước:</strong> {Number(selectedInvoice.water_amount || 0).toLocaleString('vi-VN')}đ</div>
                 <div><strong>Phí dịch vụ:</strong> {Number(selectedInvoice.service_amount || 0).toLocaleString('vi-VN')}đ</div>
                 <div><strong>Tổng tiền:</strong> {Number(selectedInvoice.total_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Đã thanh toán:</strong> {Number(selectedInvoice.paid_amount || 0).toLocaleString('vi-VN')}đ</div>
+                <div><strong>Còn lại:</strong> {getRemainingAmount(selectedInvoice).toLocaleString('vi-VN')}đ</div>
                 <div><strong>Hạn thanh toán:</strong> {selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString('vi-VN') : 'N/A'}</div>
                 <div><strong>Trạng thái:</strong> {(STATUS_MAP[selectedInvoice.status] || STATUS_MAP.unpaid).label}</div>
                 {selectedInvoice.payment_method && <div><strong>Phương thức:</strong> {selectedInvoice.payment_method}</div>}
@@ -187,26 +232,34 @@ export default function TenantInvoices() {
       {/* --- MODAL THANH TOÁN --- */}
       {payingInvoice && (
         <div className="modal-overlay" onClick={() => setPayingInvoice(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <h3 style={{ marginBottom: '20px' }}>💳 Phương thức thanh toán</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-              {['Chuyển khoản QR', 'Ví điện tử MoMo', 'Tiền mặt'].map(m => (
-                <button
-                  key={m}
-                  onClick={() => setPayMethod(m)}
-                  style={{
-                    padding: '12px', borderRadius: '8px', textAlign: 'left',
-                    border: payMethod === m ? `2px solid ${tenantColor}` : '1px solid #ddd',
-                    background: payMethod === m ? '#f0fff4' : 'white'
-                  }}
-                >
-                  {m}
-                </button>
-              ))}
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <h3 style={{ marginBottom: '12px' }}>Thanh toán qua QR mô phỏng</h3>
+            <p style={{ marginTop: 0, color: '#4a5568' }}>
+              Quét mã bằng điện thoại hoặc mở link thanh toán công khai.
+            </p>
+
+            <div style={{ display: 'grid', gap: '10px', marginBottom: '16px' }}>
+              <div><strong>Hóa đơn:</strong> #{payingInvoice.id}</div>
+              <div><strong>Số tiền còn lại:</strong> {getRemainingAmount(payingInvoice).toLocaleString('vi-VN')}đ</div>
             </div>
-            <button onClick={handlePay} disabled={!payMethod || payLoading} className="btn-primary" style={{ width: '100%', background: tenantColor }}>
-              {payLoading ? 'Đang thực hiện...' : 'Xác nhận trả tiền'}
-            </button>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(buildMockPaymentLink(payingInvoice))}`}
+                alt="Mock payment QR"
+                style={{ borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', padding: '8px' }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gap: '8px' }}>
+              <button type="button" className="btn-primary" style={{ width: '100%', background: tenantColor }} onClick={() => window.open(buildMockPaymentLink(payingInvoice), '_blank')}>
+                Mở cổng thanh toán
+              </button>
+              <button type="button" style={{ width: '100%', border: `1px solid ${tenantColor}`, color: tenantColor, background: 'white', borderRadius: '8px', padding: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => handleCopyLink(payingInvoice)}>
+                Sao chép link thanh toán
+              </button>
+              {copied ? <div style={{ color: '#2d6a4f', fontWeight: 600, fontSize: '0.9rem' }}>Đã sao chép link.</div> : null}
+            </div>
           </div>
         </div>
       )}
