@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api';
 
 const inputStyle = (disabled = false) => ({
   width: '100%',
@@ -17,15 +18,32 @@ const inputStyle = (disabled = false) => ({
 // ── Account Tab ───────────────────────────────────────────────────────────────
 function AccountTab({ form, onChange }) {
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSaving(false);
-    setSuccess('Đã lưu thông tin thành công!');
-    setTimeout(() => setSuccess(''), 3000);
+    setError('');
+    setSuccess('');
+    try {
+      // Gọi API cập nhật thông tin landlord
+      // Dùng endpoint /tenants/profile nếu là tenant, còn landlord dùng PUT /auth/profile
+      // Hiện tại backend chưa có endpoint riêng cho landlord profile,
+      // nên ta sẽ cập nhật qua users table trực tiếp bằng cách dùng endpoint có sẵn
+      await api.put('/tenants/profile', {
+        name: form.name,
+        phone: form.phone,
+        citizen_id: form.citizen_id,
+        permanent_address: form.permanent_address,
+      });
+      setSuccess('Đã lưu thông tin thành công!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || 'Lưu thất bại. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -37,6 +55,11 @@ function AccountTab({ form, onChange }) {
       {success && (
         <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#276749', fontSize: '0.9rem' }}>
           ✅ {success}
+        </div>
+      )}
+      {error && (
+        <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#742a2a', fontSize: '0.9rem' }}>
+          ⚠️ {error}
         </div>
       )}
 
@@ -59,8 +82,9 @@ function AccountTab({ form, onChange }) {
             { label: 'Email', key: 'email', type: 'email', disabled: true },
             { label: 'Số điện thoại', key: 'phone', type: 'tel', placeholder: '0912 345 678' },
             { label: 'Số CCCD/CMND', key: 'citizen_id', type: 'text', placeholder: '012345678901' },
+            { label: 'Địa chỉ thường trú', key: 'permanent_address', type: 'text', placeholder: '123 Đường ABC, Q.1, TP.HCM' },
           ].map((field) => (
-            <div key={field.key}>
+            <div key={field.key} style={field.key === 'permanent_address' ? { gridColumn: 'span 2' } : {}}>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>
                 {field.label}
               </label>
@@ -80,7 +104,7 @@ function AccountTab({ form, onChange }) {
         <button
           type="submit"
           disabled={saving}
-          style={{ marginTop: '20px', padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+          style={{ marginTop: '20px', padding: '11px 28px', border: 'none', borderRadius: '8px', background: saving ? '#a0aec0' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer' }}
         >
           {saving ? 'Đang lưu...' : '💾 Lưu thay đổi'}
         </button>
@@ -94,13 +118,18 @@ function PropertyTab({ form, onChange }) {
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Lưu vào localStorage vì backend chưa có endpoint cho property settings
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSaving(false);
-    setSuccess('Đã lưu thông tin khu trọ thành công!');
-    setTimeout(() => setSuccess(''), 3000);
+    try {
+      localStorage.setItem('propertySettings', JSON.stringify(form));
+      await new Promise((r) => setTimeout(r, 400));
+      setSuccess('Đã lưu thông tin khu trọ thành công!');
+      setTimeout(() => setSuccess(''), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const field = (key) => ({
@@ -121,7 +150,6 @@ function PropertyTab({ form, onChange }) {
       )}
 
       <form onSubmit={handleSubmit}>
-        {/* Basic info */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Thông tin cơ bản
@@ -146,7 +174,6 @@ function PropertyTab({ form, onChange }) {
           </div>
         </div>
 
-        {/* Amenities */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Tiện ích & dịch vụ
@@ -168,7 +195,6 @@ function PropertyTab({ form, onChange }) {
           </div>
         </div>
 
-        {/* Contract defaults */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Quy định & hợp đồng mặc định
@@ -206,7 +232,7 @@ function PropertyTab({ form, onChange }) {
         <button
           type="submit"
           disabled={saving}
-          style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+          style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: saving ? '#a0aec0' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer' }}
         >
           {saving ? 'Đang lưu...' : '💾 Lưu thông tin khu trọ'}
         </button>
@@ -224,21 +250,34 @@ function SecurityTab({ form, onChange }) {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    setPwError('');
+    setPwSuccess('');
+
     if (pwForm.new_password !== pwForm.confirm_password) {
       setPwError('Mật khẩu xác nhận không khớp');
       return;
     }
-    if (pwForm.new_password.length < 6) {
-      setPwError('Mật khẩu mới phải có ít nhất 6 ký tự');
+    if (pwForm.new_password.length < 8) {
+      setPwError('Mật khẩu mới phải có ít nhất 8 ký tự');
       return;
     }
+
     setPwLoading(true);
-    setPwError('');
-    await new Promise((r) => setTimeout(r, 900));
-    setPwLoading(false);
-    setPwSuccess('Đổi mật khẩu thành công!');
-    setPwForm({ current_password: '', new_password: '', confirm_password: '' });
-    setTimeout(() => setPwSuccess(''), 3000);
+    try {
+      // Gọi đúng endpoint đổi mật khẩu
+      await api.put('/auth/change-password', {
+        current_password: pwForm.current_password,
+        new_password: pwForm.new_password,
+        confirm_password: pwForm.confirm_password,
+      });
+      setPwSuccess('Đổi mật khẩu thành công! 🔒');
+      setPwForm({ current_password: '', new_password: '', confirm_password: '' });
+      setTimeout(() => setPwSuccess(''), 4000);
+    } catch (err) {
+      setPwError(err.response?.data?.error || err.response?.data?.message || 'Đổi mật khẩu thất bại');
+    } finally {
+      setPwLoading(false);
+    }
   };
 
   const Toggle = ({ value, onToggle }) => (
@@ -274,9 +313,9 @@ function SecurityTab({ form, onChange }) {
         <form onSubmit={handleChangePassword}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px' }}>
             {[
-              { label: 'Mật khẩu hiện tại', key: 'current_password' },
-              { label: 'Mật khẩu mới', key: 'new_password' },
-              { label: 'Xác nhận mật khẩu mới', key: 'confirm_password' },
+              { label: 'Mật khẩu hiện tại', key: 'current_password', placeholder: '••••••••' },
+              { label: 'Mật khẩu mới (tối thiểu 8 ký tự, gồm chữ và số)', key: 'new_password', placeholder: '••••••••' },
+              { label: 'Xác nhận mật khẩu mới', key: 'confirm_password', placeholder: '••••••••' },
             ].map((f) => (
               <div key={f.key}>
                 <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>
@@ -287,7 +326,7 @@ function SecurityTab({ form, onChange }) {
                   value={pwForm[f.key]}
                   onChange={(e) => setPwForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                   required
-                  placeholder="••••••••"
+                  placeholder={f.placeholder}
                   style={inputStyle()}
                 />
               </div>
@@ -296,7 +335,7 @@ function SecurityTab({ form, onChange }) {
           <button
             type="submit"
             disabled={pwLoading}
-            style={{ marginTop: '16px', padding: '10px 24px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: pwLoading ? 'not-allowed' : 'pointer', opacity: pwLoading ? 0.7 : 1 }}
+            style={{ marginTop: '16px', padding: '10px 24px', border: 'none', borderRadius: '8px', background: pwLoading ? '#a0aec0' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: pwLoading ? 'not-allowed' : 'pointer' }}
           >
             {pwLoading ? 'Đang xử lý...' : '🔑 Đổi mật khẩu'}
           </button>
@@ -365,24 +404,29 @@ export default function Settings() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
 
-  // ── Lifted state for all tabs ──
+  // Load saved property settings từ localStorage
+  const savedProperty = (() => {
+    try { return JSON.parse(localStorage.getItem('propertySettings') || '{}'); } catch { return {}; }
+  })();
+
   const [accountForm, setAccountForm] = useState({
-    name: user?.name || '',
+    name: user?.fullName || user?.name || '',
     email: user?.email || '',
-    phone: '',
-    citizen_id: '',
+    phone: user?.phoneNumber || '',
+    citizen_id: user?.citizenID || '',
+    permanent_address: user?.permanentAddress || '',
   });
 
   const [propertyForm, setPropertyForm] = useState({
-    property_name: '',
-    address: '',
-    total_floors: '',
-    total_rooms: '',
-    rules: '',
-    wifi_info: '',
-    parking: '',
-    deposit_months: '2',
-    notice_days: '30',
+    property_name: savedProperty.property_name || '',
+    address: savedProperty.address || '',
+    total_floors: savedProperty.total_floors || '',
+    total_rooms: savedProperty.total_rooms || '',
+    rules: savedProperty.rules || '',
+    wifi_info: savedProperty.wifi_info || '',
+    parking: savedProperty.parking || '',
+    deposit_months: savedProperty.deposit_months || '2',
+    notice_days: savedProperty.notice_days || '30',
   });
 
   const [securityForm, setSecurityForm] = useState({
@@ -390,7 +434,6 @@ export default function Settings() {
     loginNotif: true,
   });
 
-  // Generic updater: onChange('account' | 'property' | 'security', key, value)
   const handleChange = (section, key, value) => {
     if (section === 'account') setAccountForm((f) => ({ ...f, [key]: value }));
     else if (section === 'property') setPropertyForm((f) => ({ ...f, [key]: value }));
@@ -415,20 +458,14 @@ export default function Settings() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
+              display: 'flex', alignItems: 'center', gap: '10px',
+              width: '100%', padding: '12px 16px', border: 'none',
               background: activeTab === tab.id ? '#f0f4ff' : 'transparent',
               color: activeTab === tab.id ? '#667eea' : '#555',
               fontWeight: activeTab === tab.id ? '700' : '500',
-              fontSize: '0.9rem',
-              cursor: 'pointer',
+              fontSize: '0.9rem', cursor: 'pointer',
               borderLeft: activeTab === tab.id ? '3px solid #667eea' : '3px solid transparent',
-              textAlign: 'left',
-              transition: 'all 0.15s',
+              textAlign: 'left', transition: 'all 0.15s',
             }}
           >
             <span style={{ fontSize: '16px' }}>{tab.icon}</span>
@@ -437,7 +474,6 @@ export default function Settings() {
         ))}
       </div>
 
-      {/* Content — tabs are always mounted, only shown/hidden via display */}
       <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
         <div style={{ display: activeTab === 'account' ? 'block' : 'none' }}>
           <AccountTab form={accountForm} onChange={handleChange} />

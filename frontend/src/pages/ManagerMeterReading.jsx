@@ -25,12 +25,23 @@ function StatCard({ icon, label, value, color }) {
 }
 
 // ── Reading Row Input ─────────────────────────────────────────────────────────
-function ReadingRow({ room, prev, onSave }) {
+function ReadingRow({ room, prev, month, year, onSaved }) {
   const [elec, setElec] = useState('');
   const [water, setWater] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedData, setSavedData] = useState(null);
   const [err, setErr] = useState('');
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [invoiceSettings, setInvoiceSettings] = useState({
+    elecPrice: '3500',
+    waterPrice: '15000',
+    wifiFee: '0',
+    trashFee: '0',
+    dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 10); return d.toISOString().slice(0, 10); })(),
+  });
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [invoiceCreated, setInvoiceCreated] = useState(false);
 
   const elecUsage  = elec && prev ? Math.max(0, Number(elec) - (prev.electricityIndex || 0)) : null;
   const waterUsage = water && prev ? Math.max(0, Number(water) - (prev.waterIndex || 0)) : null;
@@ -38,15 +49,77 @@ function ReadingRow({ room, prev, onSave }) {
   const handleSave = async () => {
     if (!elec || !water) { setErr('Vui lòng nhập đủ cả 2 chỉ số'); return; }
     if (Number(elec) < (prev?.electricityIndex || 0)) { setErr('Chỉ số điện không được nhỏ hơn kỳ trước'); return; }
-    if (Number(water) < (prev?.waterIndex || 0))      { setErr('Chỉ số nước không được nhỏ hơn kỳ trước'); return; }
+    if (Number(water) < (prev?.waterIndex || 0)) { setErr('Chỉ số nước không được nhỏ hơn kỳ trước'); return; }
     setSaving(true); setErr('');
     try {
-      await onSave(room.roomID || room.id, Number(elec), Number(water), prev);
+      // Lưu meter reading thật vào DB
+      const mrRes = await api.post('/meter-readings', {
+        roomID: room.roomID || room.id,
+        electricityIndex: Number(elec),
+        waterIndex: Number(water),
+        recordedDate: new Date().toISOString().slice(0, 10),
+      });
       setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      setSavedData(mrRes.data?.data);
+      setShowInvoiceForm(true);
+      if (onSaved) onSaved();
     } catch (e) {
       setErr(e.response?.data?.message || 'Lưu thất bại');
     } finally { setSaving(false); }
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!savedData) return;
+    setCreatingInvoice(true);
+    setErr('');
+    try {
+      // Tính toán hóa đơn
+      const calcRes = await api.post('/landlord/invoices/calculate', {
+        roomID: room.roomID || room.id,
+        month, year,
+        roomPrice: room.price,
+        prevElectricityIndex: savedData.prevElectricityIndex || prev?.electricityIndex || 0,
+        currentElectricityIndex: Number(elec),
+        prevWaterIndex: savedData.prevWaterIndex || prev?.waterIndex || 0,
+        currentWaterIndex: Number(water),
+        serviceUnitPrices: {
+          electricityUnitPrice: Number(invoiceSettings.elecPrice),
+          waterUnitPrice: Number(invoiceSettings.waterPrice),
+        },
+        serviceFees: {
+          wifiFee: Number(invoiceSettings.wifiFee),
+          trashFee: Number(invoiceSettings.trashFee),
+        },
+      });
+
+      const bd = calcRes.data.data.breakdown;
+      const total = calcRes.data.data.totalAmount;
+
+      // Lấy contractID của phòng
+      const contractsRes = await api.get(`/contracts?status=active`).catch(() => ({ data: { data: [] } }));
+      const contracts = contractsRes.data.data || [];
+      const matchedContract = contracts.find(c => String(c.roomID) === String(room.roomID || room.id));
+
+      // Tạo hóa đơn
+      await api.post('/invoices', {
+        roomID: room.roomID || room.id,
+        contractID: matchedContract?.contractID || null,
+        readingID: savedData.id || null,
+        month,
+        year,
+        rentAmount: bd.roomPrice,
+        electricityAmount: bd.electricityAmount,
+        waterAmount: bd.waterAmount,
+        serviceAmount: bd.serviceAmount,
+        totalAmount: total,
+        dueDate: invoiceSettings.dueDate,
+      });
+
+      setInvoiceCreated(true);
+      setShowInvoiceForm(false);
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Tạo hóa đơn thất bại');
+    } finally { setCreatingInvoice(false); }
   };
 
   const inp = (val) => ({
@@ -58,91 +131,210 @@ function ReadingRow({ room, prev, onSave }) {
   });
 
   return (
-    <tr style={{
-      background: saved ? '#f0fff4' : 'white',
-      transition: 'background 0.4s',
-    }}
-      onMouseEnter={e => { if (!saved) e.currentTarget.style.background = '#f8fafc'; }}
-      onMouseLeave={e => { if (!saved) e.currentTarget.style.background = 'white'; }}>
-
-      {/* Phòng */}
-      <td style={{ padding: '12px 16px' }}>
-        <div style={{ fontWeight: 700, color: '#2d3748', fontSize: '0.92rem' }}>
-          🏠 {room.name}
-        </div>
-        {room.tenantName && (
-          <div style={{ fontSize: '0.76rem', color: '#a0aec0', marginTop: 2 }}>{room.tenantName}</div>
-        )}
-      </td>
-
-      {/* Chỉ số kỳ trước */}
-      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.82rem', color: '#4a5568' }}>
-          ⚡ {prev?.electricityIndex ?? '—'}
-        </div>
-        <div style={{ fontSize: '0.82rem', color: '#4a5568', marginTop: 2 }}>
-          💧 {prev?.waterIndex ?? '—'}
-        </div>
-      </td>
-
-      {/* Input điện */}
-      <td style={{ padding: '12px 16px', minWidth: 120 }}>
-        <input
-          type="number" min={prev?.electricityIndex || 0}
-          value={elec} onChange={e => { setElec(e.target.value); setErr(''); }}
-          placeholder={`> ${prev?.electricityIndex ?? 0}`}
-          style={inp(elec)}
-        />
-        {elecUsage !== null && (
-          <div style={{ fontSize: '0.72rem', color: '#667eea', marginTop: 3, textAlign: 'center' }}>
-            Dùng: {elecUsage} kWh
+    <>
+      <tr style={{
+        background: invoiceCreated ? '#f0fff4' : saved ? '#f0f8ff' : 'white',
+        transition: 'background 0.4s',
+      }}>
+        {/* Phòng */}
+        <td style={{ padding: '12px 16px' }}>
+          <div style={{ fontWeight: 700, color: '#2d3748', fontSize: '0.92rem' }}>
+            🏠 {room.name}
           </div>
-        )}
-      </td>
+          {room.tenantName && (
+            <div style={{ fontSize: '0.76rem', color: '#a0aec0', marginTop: 2 }}>{room.tenantName}</div>
+          )}
+        </td>
 
-      {/* Input nước */}
-      <td style={{ padding: '12px 16px', minWidth: 120 }}>
-        <input
-          type="number" min={prev?.waterIndex || 0}
-          value={water} onChange={e => { setWater(e.target.value); setErr(''); }}
-          placeholder={`> ${prev?.waterIndex ?? 0}`}
-          style={inp(water)}
-        />
-        {waterUsage !== null && (
-          <div style={{ fontSize: '0.72rem', color: '#38b2ac', marginTop: 3, textAlign: 'center' }}>
-            Dùng: {waterUsage} m³
+        {/* Chỉ số kỳ trước */}
+        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.82rem', color: '#4a5568' }}>
+            ⚡ {prev?.electricityIndex ?? '—'}
           </div>
-        )}
-      </td>
+          <div style={{ fontSize: '0.82rem', color: '#4a5568', marginTop: 2 }}>
+            💧 {prev?.waterIndex ?? '—'}
+          </div>
+        </td>
 
-      {/* Action */}
-      <td style={{ padding: '12px 16px', textAlign: 'center', minWidth: 120 }}>
-        {err && (
-          <div style={{ fontSize: '0.72rem', color: '#e53e3e', marginBottom: 4 }}>{err}</div>
-        )}
-        {saved ? (
-          <span style={{
-            background: '#e6fffa', color: '#38b2ac',
-            padding: '6px 14px', borderRadius: 20,
-            fontSize: '0.8rem', fontWeight: 700,
-          }}>✅ Đã lưu</span>
-        ) : (
-          <button
-            onClick={handleSave} disabled={saving || !elec || !water}
-            style={{
-              background: (!elec || !water) ? '#e2e8f0' : 'linear-gradient(135deg, #667eea, #764ba2)',
-              color: (!elec || !water) ? '#a0aec0' : 'white',
-              border: 'none', borderRadius: 8,
-              padding: '7px 16px', cursor: (!elec || !water) ? 'not-allowed' : 'pointer',
-              fontWeight: 700, fontSize: '0.82rem', transition: 'all 0.2s',
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving ? '...' : '💾 Lưu'}
-          </button>
-        )}
-      </td>
-    </tr>
+        {/* Input điện */}
+        <td style={{ padding: '12px 16px', minWidth: 120 }}>
+          {saved ? (
+            <div style={{ textAlign: 'center', fontWeight: 700, color: '#667eea', fontFamily: 'monospace' }}>{elec}</div>
+          ) : (
+            <>
+              <input
+                type="number" min={prev?.electricityIndex || 0}
+                value={elec} onChange={e => { setElec(e.target.value); setErr(''); }}
+                placeholder={`> ${prev?.electricityIndex ?? 0}`}
+                style={inp(elec)}
+              />
+              {elecUsage !== null && (
+                <div style={{ fontSize: '0.72rem', color: '#667eea', marginTop: 3, textAlign: 'center' }}>
+                  Dùng: {elecUsage} kWh
+                </div>
+              )}
+            </>
+          )}
+        </td>
+
+        {/* Input nước */}
+        <td style={{ padding: '12px 16px', minWidth: 120 }}>
+          {saved ? (
+            <div style={{ textAlign: 'center', fontWeight: 700, color: '#38b2ac', fontFamily: 'monospace' }}>{water}</div>
+          ) : (
+            <>
+              <input
+                type="number" min={prev?.waterIndex || 0}
+                value={water} onChange={e => { setWater(e.target.value); setErr(''); }}
+                placeholder={`> ${prev?.waterIndex ?? 0}`}
+                style={inp(water)}
+              />
+              {waterUsage !== null && (
+                <div style={{ fontSize: '0.72rem', color: '#38b2ac', marginTop: 3, textAlign: 'center' }}>
+                  Dùng: {waterUsage} m³
+                </div>
+              )}
+            </>
+          )}
+        </td>
+
+        {/* Action */}
+        <td style={{ padding: '12px 16px', textAlign: 'center', minWidth: 160 }}>
+          {err && (
+            <div style={{ fontSize: '0.72rem', color: '#e53e3e', marginBottom: 4 }}>{err}</div>
+          )}
+          {invoiceCreated ? (
+            <span style={{
+              background: '#e6fffa', color: '#38b2ac',
+              padding: '6px 14px', borderRadius: 20,
+              fontSize: '0.8rem', fontWeight: 700, display: 'block',
+            }}>✅ Đã tạo HĐ</span>
+          ) : saved ? (
+            <button
+              onClick={() => setShowInvoiceForm(v => !v)}
+              style={{
+                background: 'linear-gradient(135deg, #38b2ac, #2c7a7b)',
+                color: 'white', border: 'none', borderRadius: 8,
+                padding: '7px 12px', cursor: 'pointer',
+                fontWeight: 700, fontSize: '0.78rem',
+              }}
+            >
+              {showInvoiceForm ? '▲ Ẩn' : '📄 Tạo hóa đơn'}
+            </button>
+          ) : (
+            <button
+              onClick={handleSave} disabled={saving || !elec || !water}
+              style={{
+                background: (!elec || !water) ? '#e2e8f0' : 'linear-gradient(135deg, #667eea, #764ba2)',
+                color: (!elec || !water) ? '#a0aec0' : 'white',
+                border: 'none', borderRadius: 8,
+                padding: '7px 16px', cursor: (!elec || !water) ? 'not-allowed' : 'pointer',
+                fontWeight: 700, fontSize: '0.82rem', transition: 'all 0.2s',
+                opacity: saving ? 0.7 : 1,
+              }}
+            >
+              {saving ? '...' : '💾 Lưu chỉ số'}
+            </button>
+          )}
+        </td>
+      </tr>
+
+      {/* Row mở rộng: tạo hóa đơn */}
+      {showInvoiceForm && !invoiceCreated && (
+        <tr>
+          <td colSpan={5} style={{ padding: '0 16px 16px', background: '#f8faff' }}>
+            <div style={{
+              border: '1.5px solid #c3dafe', borderRadius: 12, padding: 16,
+              background: 'white', marginTop: 4,
+            }}>
+              <div style={{ fontWeight: 700, color: '#667eea', marginBottom: 12, fontSize: '0.88rem' }}>
+                📄 Tạo hóa đơn tháng {month}/{year} — Phòng {room.name}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#718096', marginBottom: 4, fontWeight: 600 }}>Giá điện (đ/kWh)</div>
+                  <input type="number" value={invoiceSettings.elecPrice}
+                    onChange={e => setInvoiceSettings(s => ({ ...s, elecPrice: e.target.value }))}
+                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: '0.85rem', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#718096', marginBottom: 4, fontWeight: 600 }}>Giá nước (đ/m³)</div>
+                  <input type="number" value={invoiceSettings.waterPrice}
+                    onChange={e => setInvoiceSettings(s => ({ ...s, waterPrice: e.target.value }))}
+                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: '0.85rem', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#718096', marginBottom: 4, fontWeight: 600 }}>Phí Wifi (đ)</div>
+                  <input type="number" value={invoiceSettings.wifiFee}
+                    onChange={e => setInvoiceSettings(s => ({ ...s, wifiFee: e.target.value }))}
+                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: '0.85rem', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#718096', marginBottom: 4, fontWeight: 600 }}>Phí rác (đ)</div>
+                  <input type="number" value={invoiceSettings.trashFee}
+                    onChange={e => setInvoiceSettings(s => ({ ...s, trashFee: e.target.value }))}
+                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: '0.85rem', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#718096', marginBottom: 4, fontWeight: 600 }}>Hạn thanh toán</div>
+                  <input type="date" value={invoiceSettings.dueDate}
+                    onChange={e => setInvoiceSettings(s => ({ ...s, dueDate: e.target.value }))}
+                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: '0.85rem', outline: 'none' }}
+                  />
+                </div>
+              </div>
+              {/* Preview nhanh */}
+              {elecUsage !== null && waterUsage !== null && (
+                <div style={{
+                  background: '#f0f4ff', borderRadius: 8, padding: '8px 12px',
+                  fontSize: '0.8rem', color: '#4a5568', marginBottom: 12,
+                  display: 'flex', gap: 16, flexWrap: 'wrap',
+                }}>
+                  <span>🏠 Phòng: <strong>{fmtMoney(room.price)}</strong></span>
+                  <span>⚡ {elecUsage} kWh × {fmtMoney(invoiceSettings.elecPrice)} = <strong>{fmtMoney(elecUsage * Number(invoiceSettings.elecPrice))}</strong></span>
+                  <span>💧 {waterUsage} m³ × {fmtMoney(invoiceSettings.waterPrice)} = <strong>{fmtMoney(waterUsage * Number(invoiceSettings.waterPrice))}</strong></span>
+                  <span style={{ fontWeight: 700, color: '#667eea' }}>
+                    Tổng ≈ {fmtMoney(
+                      Number(room.price) +
+                      elecUsage * Number(invoiceSettings.elecPrice) +
+                      waterUsage * Number(invoiceSettings.waterPrice) +
+                      Number(invoiceSettings.wifiFee) +
+                      Number(invoiceSettings.trashFee)
+                    )}
+                  </span>
+                </div>
+              )}
+              {err && (
+                <div style={{ color: '#e53e3e', fontSize: '0.82rem', marginBottom: 8 }}>⚠️ {err}</div>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setShowInvoiceForm(false)}
+                  style={{ padding: '8px 16px', border: '1px solid #e2e8f0', background: 'white', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', color: '#718096' }}
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleCreateInvoice}
+                  disabled={creatingInvoice}
+                  style={{
+                    padding: '8px 20px', border: 'none', borderRadius: 8, cursor: 'pointer',
+                    background: creatingInvoice ? '#a0aec0' : 'linear-gradient(135deg, #667eea, #764ba2)',
+                    color: 'white', fontWeight: 700, fontSize: '0.85rem',
+                  }}
+                >
+                  {creatingInvoice ? 'Đang tạo...' : '✅ Xác nhận tạo hóa đơn'}
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -155,6 +347,7 @@ export default function ManagerMeterReading() {
   const [year, setYear]         = useState(curYear);
   const [search, setSearch]     = useState('');
   const [toast, setToast]       = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const showToast = (msg, ok = true) => {
     setToast({ msg, ok });
@@ -183,23 +376,10 @@ export default function ManagerMeterReading() {
     } finally { setLoading(false); }
   }, [month, year]);
 
-  useEffect(() => { fetchRooms(); }, [fetchRooms]);
+  useEffect(() => { fetchRooms(); }, [fetchRooms, refreshKey]);
 
-  const handleSave = async (roomId, elec, water, prev) => {
-    // POST to create meter reading + invoice via existing API
-    // Using landlord invoices calculate as a preview/save mechanism
-    // In production this would call a dedicated meter-reading POST endpoint
-    await api.post('/landlord/invoices/calculate', {
-      roomID: roomId,
-      month, year,
-      prevElectricityIndex: prev?.electricityIndex || 0,
-      currentElectricityIndex: elec,
-      prevWaterIndex: prev?.waterIndex || 0,
-      currentWaterIndex: water,
-      serviceUnitPrices: { electricityUnitPrice: 3500, waterUnitPrice: 15000 },
-      serviceFees: { wifiFee: 0, trashFee: 0 },
-    });
-    showToast(`✅ Đã ghi chỉ số phòng thành công`);
+  const handleSaved = () => {
+    showToast('✅ Đã lưu chỉ số điện nước thành công!');
   };
 
   const filtered = rooms.filter(r => {
@@ -232,7 +412,9 @@ export default function ManagerMeterReading() {
         <h2 style={{ fontSize: '1.6rem', color: '#2d3748', marginBottom: 4 }}>
           ⚡ Ghi chỉ số điện nước
         </h2>
-        <p style={{ color: '#718096' }}>Nhập chỉ số công tơ điện và đồng hồ nước theo từng phòng</p>
+        <p style={{ color: '#718096' }}>
+          Nhập chỉ số công tơ điện và đồng hồ nước — sau đó tạo hóa đơn ngay tại đây
+        </p>
       </div>
 
       {/* Stats */}
@@ -269,7 +451,7 @@ export default function ManagerMeterReading() {
             }}
           />
         </div>
-        <button onClick={fetchRooms}
+        <button onClick={() => setRefreshKey(k => k + 1)}
           style={{ padding: '8px 16px', background: '#f0f4ff', color: '#667eea', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
           🔄 Tải lại
         </button>
@@ -281,7 +463,7 @@ export default function ManagerMeterReading() {
         borderRadius: 10, padding: '10px 16px', marginBottom: 20,
         fontSize: '0.83rem', color: '#744210', display: 'flex', gap: 8, alignItems: 'center',
       }}>
-        💡 <strong>Hướng dẫn:</strong> Nhập chỉ số công tơ điện (kWh) và đồng hồ nước (m³) hiện tại cho từng phòng. Hệ thống tự tính tiêu thụ so với kỳ trước.
+        💡 <strong>Hướng dẫn:</strong> Nhập chỉ số → Nhấn <strong>Lưu chỉ số</strong> → Nhấn <strong>Tạo hóa đơn</strong> để hoàn tất quy trình ghi điện nước hàng tháng.
       </div>
 
       {/* Table */}
@@ -307,13 +489,14 @@ export default function ManagerMeterReading() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((room, idx) => (
+                {filtered.map((room) => (
                   <ReadingRow
                     key={room.roomID || room.id}
                     room={room}
                     prev={prevMap[room.roomID || room.id]}
-                    onSave={handleSave}
-                    style={{ background: idx % 2 === 0 ? '#fafafa' : 'white' }}
+                    month={month}
+                    year={year}
+                    onSaved={handleSaved}
                   />
                 ))}
               </tbody>

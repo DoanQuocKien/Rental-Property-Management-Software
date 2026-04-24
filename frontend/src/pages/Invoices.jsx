@@ -9,7 +9,7 @@ const CUR_YEAR  = NOW.getFullYear();
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const YEARS  = [CUR_YEAR - 1, CUR_YEAR, CUR_YEAR + 1];
 
-const fmt    = (n) => Number(n || 0).toLocaleString('vi-VN');
+const fmt     = (n) => Number(n || 0).toLocaleString('vi-VN');
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
 
 // ─── Injected CSS ─────────────────────────────────────────────────────────────
@@ -18,31 +18,21 @@ const STYLES = `
 
   .inv-root { font-family: 'Be Vietnam Pro', sans-serif; color: #1a1f2e; }
 
-  /* ── Tokens ── */
   :root {
-    --c-bg: #f4f6fb;
-    --c-card: #ffffff;
-    --c-border: #e8eaf2;
-    --c-accent: #4f46e5;
-    --c-accent2: #7c3aed;
-    --c-green: #059669;
-    --c-red: #dc2626;
-    --c-amber: #d97706;
-    --c-text: #1a1f2e;
-    --c-muted: #64748b;
-    --c-subtle: #94a3b8;
+    --c-bg: #f4f6fb; --c-card: #ffffff; --c-border: #e8eaf2;
+    --c-accent: #4f46e5; --c-accent2: #7c3aed;
+    --c-green: #059669; --c-red: #dc2626; --c-amber: #d97706;
+    --c-text: #1a1f2e; --c-muted: #64748b; --c-subtle: #94a3b8;
     --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
     --shadow-md: 0 4px 16px rgba(0,0,0,.1);
     --shadow-lg: 0 12px 40px rgba(0,0,0,.14);
     --r: 14px;
   }
 
-  /* ── Layout ── */
   .inv-header { margin-bottom: 28px; }
   .inv-header h2 { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 4px; }
   .inv-header p  { font-size: .88rem; color: var(--c-muted); margin: 0; }
 
-  /* ── Stats Row ── */
   .inv-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
   .inv-stat  {
     background: var(--c-card); border-radius: var(--r); padding: 18px 20px;
@@ -50,37 +40,18 @@ const STYLES = `
     display: flex; align-items: center; gap: 14px; transition: box-shadow .2s;
   }
   .inv-stat:hover { box-shadow: var(--shadow-md); }
-  .inv-stat-icon {
-    width: 44px; height: 44px; border-radius: 12px; display: flex;
-    align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;
-  }
+  .inv-stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
   .inv-stat-val  { font-size: 1.55rem; font-weight: 800; line-height: 1; color: var(--c-text); }
   .inv-stat-lbl  { font-size: .76rem; color: var(--c-muted); margin-top: 3px; font-weight: 500; }
 
-  /* ── Two-panel ── */
   .inv-body  { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: start; }
-
-  /* ── Panel card ── */
-  .inv-panel {
-    background: var(--c-card); border-radius: var(--r);
-    box-shadow: var(--shadow-sm); border: 1px solid var(--c-border); overflow: hidden;
-  }
-  .inv-panel-head {
-    padding: 16px 20px; border-bottom: 1px solid var(--c-border);
-    font-weight: 700; font-size: .92rem; display: flex; align-items: center; gap: 8px;
-    background: linear-gradient(135deg,#f8f9ff,#f4f6fb);
-  }
+  .inv-panel { background: var(--c-card); border-radius: var(--r); box-shadow: var(--shadow-sm); border: 1px solid var(--c-border); overflow: hidden; }
+  .inv-panel-head { padding: 16px 20px; border-bottom: 1px solid var(--c-border); font-weight: 700; font-size: .92rem; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg,#f8f9ff,#f4f6fb); }
   .inv-panel-body { padding: 20px; }
 
-  /* ── Form controls ── */
   .inv-field { margin-bottom: 14px; }
-  .inv-label { display: block; font-size: .78rem; font-weight: 700; color: var(--c-muted);
-    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-  .inv-input {
-    width: 100%; padding: 9px 12px; border-radius: 9px; outline: none; font-size: .9rem;
-    border: 1.5px solid var(--c-border); background: #fafbff; color: var(--c-text);
-    transition: border-color .2s, box-shadow .2s; font-family: inherit; box-sizing: border-box;
-  }
+  .inv-label { display: block; font-size: .78rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .inv-input { width: 100%; padding: 9px 12px; border-radius: 9px; outline: none; font-size: .9rem; border: 1.5px solid var(--c-border); background: #fafbff; color: var(--c-text); transition: border-color .2s, box-shadow .2s; font-family: inherit; box-sizing: border-box; }
   .inv-input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(79,70,229,.12); background: #fff; }
   .inv-input.mono  { font-family: 'JetBrains Mono', monospace; font-size: .88rem; }
   .inv-input.ok    { border-color: var(--c-green); }
@@ -88,181 +59,82 @@ const STYLES = `
   .inv-hint { font-size: .74rem; color: var(--c-subtle); margin-top: 4px; }
   .inv-hint.warn { color: var(--c-amber); }
   .inv-hint.ok   { color: var(--c-green); }
-
   .inv-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-  /* ── Index pair ── */
-  .inv-index-box {
-    background: #f8f9ff; border-radius: 10px; padding: 14px;
-    border: 1px solid #e0e4f5; margin-bottom: 14px;
-  }
+  .inv-index-box { background: #f8f9ff; border-radius: 10px; padding: 14px; border: 1px solid #e0e4f5; margin-bottom: 14px; }
   .inv-index-label { font-size: .8rem; font-weight: 700; color: var(--c-accent); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
   .inv-index-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .inv-prev-val {
-    background: #eef0fb; border-radius: 7px; padding: 8px 10px; text-align: center;
-    font-family: 'JetBrains Mono', monospace; font-size: .9rem; font-weight: 600;
-    color: var(--c-accent); border: 1px solid #d5d9f5;
-  }
+  .inv-prev-val { background: #eef0fb; border-radius: 7px; padding: 8px 10px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: .9rem; font-weight: 600; color: var(--c-accent); border: 1px solid #d5d9f5; }
   .inv-prev-label { font-size: .68rem; color: var(--c-muted); margin-bottom: 2px; font-weight: 500; }
-  .inv-usage-tag {
-    font-size: .74rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;
-    display: inline-block; margin-top: 4px;
-  }
-
-  /* ── Divider ── */
+  .inv-usage-tag { font-size: .74rem; font-weight: 600; padding: 3px 8px; border-radius: 20px; display: inline-block; margin-top: 4px; }
   .inv-divider { border: none; border-top: 1px dashed var(--c-border); margin: 16px 0; }
 
-  /* ── Calculate button ── */
-  .inv-btn-calc {
-    width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer;
-    font-size: .92rem; font-weight: 700; font-family: inherit; letter-spacing: .3px;
-    background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff;
-    box-shadow: 0 4px 12px rgba(79,70,229,.35); transition: all .2s;
-  }
+  .inv-btn-calc { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-size: .92rem; font-weight: 700; font-family: inherit; letter-spacing: .3px; background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff; box-shadow: 0 4px 12px rgba(79,70,229,.35); transition: all .2s; }
   .inv-btn-calc:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(79,70,229,.4); }
   .inv-btn-calc:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
-
-  .inv-btn-save {
-    width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer;
-    font-size: .92rem; font-weight: 700; font-family: inherit; letter-spacing: .3px;
-    background: linear-gradient(135deg,#059669,#047857); color: #fff;
-    box-shadow: 0 4px 12px rgba(5,150,105,.3); transition: all .2s; margin-top: 10px;
-  }
+  .inv-btn-save { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-size: .92rem; font-weight: 700; font-family: inherit; letter-spacing: .3px; background: linear-gradient(135deg,#059669,#047857); color: #fff; box-shadow: 0 4px 12px rgba(5,150,105,.3); transition: all .2s; margin-top: 10px; }
   .inv-btn-save:hover:not(:disabled) { transform: translateY(-1px); }
   .inv-btn-save:disabled { opacity: .55; cursor: not-allowed; transform: none; }
-
-  .inv-btn-sec {
-    width: 100%; padding: 10px; border-radius: 9px; border: 1.5px solid var(--c-border);
-    background: white; cursor: pointer; font-size: .88rem; font-weight: 600;
-    color: var(--c-muted); font-family: inherit; transition: all .18s; margin-top: 8px;
-  }
+  .inv-btn-sec { width: 100%; padding: 10px; border-radius: 9px; border: 1.5px solid var(--c-border); background: white; cursor: pointer; font-size: .88rem; font-weight: 600; color: var(--c-muted); font-family: inherit; transition: all .18s; margin-top: 8px; }
   .inv-btn-sec:hover { border-color: var(--c-accent); color: var(--c-accent); background: #f8f9ff; }
 
-  /* ── Preview result ── */
-  .inv-result {
-    background: linear-gradient(135deg,#f0f4ff,#f8f0ff);
-    border-radius: 12px; padding: 18px; border: 1.5px solid #d5d9f5; margin-top: 16px;
-    animation: fadeUp .3s ease;
-  }
+  .inv-result { background: linear-gradient(135deg,#f0f4ff,#f8f0ff); border-radius: 12px; padding: 18px; border: 1.5px solid #d5d9f5; margin-top: 16px; animation: fadeUp .3s ease; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
   .inv-result-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: .88rem; }
   .inv-result-row + .inv-result-row { border-top: 1px solid rgba(79,70,229,.12); }
   .inv-result-lbl { color: var(--c-muted); }
   .inv-result-val { font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--c-text); font-size: .86rem; }
-  .inv-result-total {
-    margin-top: 12px; padding: 12px 14px; background: linear-gradient(135deg,#4f46e5,#7c3aed);
-    border-radius: 9px; display: flex; justify-content: space-between; align-items: center;
-  }
+  .inv-result-total { margin-top: 12px; padding: 12px 14px; background: linear-gradient(135deg,#4f46e5,#7c3aed); border-radius: 9px; display: flex; justify-content: space-between; align-items: center; }
   .inv-result-total-lbl { color: rgba(255,255,255,.85); font-weight: 600; font-size: .9rem; }
   .inv-result-total-val { color: #fff; font-weight: 800; font-size: 1.2rem; font-family: 'JetBrains Mono', monospace; }
 
-  /* ── List panel ── */
-  .inv-toolbar {
-    padding: 14px 20px; border-bottom: 1px solid var(--c-border);
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-    background: #fafbff;
-  }
+  .inv-toolbar { padding: 14px 20px; border-bottom: 1px solid var(--c-border); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #fafbff; }
   .inv-tab-group { display: flex; background: var(--c-bg); padding: 3px; border-radius: 9px; gap: 2px; }
-  .inv-tab {
-    padding: 6px 14px; border-radius: 7px; border: none; cursor: pointer; font-family: inherit;
-    font-size: .82rem; font-weight: 600; transition: all .18s; color: var(--c-muted);
-    background: transparent;
-  }
+  .inv-tab { padding: 6px 14px; border-radius: 7px; border: none; cursor: pointer; font-family: inherit; font-size: .82rem; font-weight: 600; transition: all .18s; color: var(--c-muted); background: transparent; }
   .inv-tab.active { background: white; color: var(--c-accent); box-shadow: var(--shadow-sm); }
-  .inv-search {
-    flex: 1; min-width: 160px; padding: 7px 10px 7px 32px; border-radius: 9px;
-    border: 1.5px solid var(--c-border); outline: none; font-size: .85rem; font-family: inherit;
-    background: white; color: var(--c-text); transition: border-color .2s;
-  }
+  .inv-search { flex: 1; min-width: 160px; padding: 7px 10px 7px 32px; border-radius: 9px; border: 1.5px solid var(--c-border); outline: none; font-size: .85rem; font-family: inherit; background: white; color: var(--c-text); transition: border-color .2s; }
   .inv-search:focus { border-color: var(--c-accent); }
   .inv-search-wrap { position: relative; flex: 1; min-width: 160px; }
   .inv-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--c-subtle); font-size: .9rem; pointer-events: none; }
 
-  /* ── Invoice row ── */
   .inv-table { width: 100%; border-collapse: collapse; }
-  .inv-th {
-    padding: 11px 14px; text-align: left; font-size: .74rem; font-weight: 700;
-    color: var(--c-muted); text-transform: uppercase; letter-spacing: .5px;
-    background: #fafbff; border-bottom: 2px solid var(--c-border);
-  }
+  .inv-th { padding: 11px 14px; text-align: left; font-size: .74rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: .5px; background: #fafbff; border-bottom: 2px solid var(--c-border); }
   .inv-td { padding: 13px 14px; font-size: .87rem; border-bottom: 1px solid var(--c-border); }
   .inv-tr { transition: background .15s; cursor: pointer; }
   .inv-tr:hover { background: #f8f9ff; }
 
-  /* ── Badge ── */
-  .inv-badge {
-    padding: 4px 10px; border-radius: 20px; font-size: .74rem; font-weight: 700;
-    display: inline-flex; align-items: center; gap: 4px;
-  }
+  .inv-badge { padding: 4px 10px; border-radius: 20px; font-size: .74rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
   .badge-paid    { background: #d1fae5; color: #065f46; }
   .badge-unpaid  { background: #fee2e2; color: #991b1b; }
   .badge-overdue { background: #fef3c7; color: #92400e; }
+  .badge-partial { background: #e0f2fe; color: #0369a1; }
 
-  /* ── Empty state ── */
   .inv-empty { padding: 60px 20px; text-align: center; color: var(--c-subtle); }
   .inv-empty-icon { font-size: 3rem; margin-bottom: 12px; }
 
-  /* ── Detail modal ── */
-  .inv-modal-bg {
-    position: fixed; inset: 0; background: rgba(15,20,40,.55);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000; backdrop-filter: blur(4px); animation: fadeIn .18s;
-  }
+  .inv-modal-bg { position: fixed; inset: 0; background: rgba(15,20,40,.55); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); animation: fadeIn .18s; }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-  .inv-modal {
-    background: white; border-radius: 18px; width: 100%; max-width: 500px;
-    max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
-    animation: popUp .22s cubic-bezier(.34,1.56,.64,1);
-  }
+  .inv-modal { background: white; border-radius: 18px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: popUp .22s cubic-bezier(.34,1.56,.64,1); }
   @keyframes popUp { from { opacity:0; transform:scale(.94) translateY(12px); } to { opacity:1; transform:none; } }
-  .inv-modal-head {
-    padding: 22px 24px; background: linear-gradient(135deg,#4f46e5,#7c3aed); color: white; border-radius: 18px 18px 0 0;
-    display: flex; justify-content: space-between; align-items: flex-start;
-  }
-  .inv-modal-close {
-    background: rgba(255,255,255,.2); border: none; color: white; width: 30px; height: 30px;
-    border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  }
+  .inv-modal-head { padding: 22px 24px; background: linear-gradient(135deg,#4f46e5,#7c3aed); color: white; border-radius: 18px 18px 0 0; display: flex; justify-content: space-between; align-items: flex-start; }
+  .inv-modal-close { background: rgba(255,255,255,.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .inv-modal-body { padding: 22px 24px; }
-  .inv-detail-row {
-    display: flex; justify-content: space-between; padding: 9px 0; font-size: .9rem;
-    border-bottom: 1px solid var(--c-border);
-  }
+  .inv-detail-row { display: flex; justify-content: space-between; padding: 9px 0; font-size: .9rem; border-bottom: 1px solid var(--c-border); }
   .inv-detail-lbl { color: var(--c-muted); }
   .inv-detail-val { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: .87rem; }
   .inv-detail-total { display: flex; justify-content: space-between; padding: 14px; background: #f0f4ff; border-radius: 10px; margin-top: 12px; }
 
-  /* ── Toast ── */
-  .inv-toast {
-    position: fixed; top: 24px; right: 24px; z-index: 9999;
-    padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: .88rem;
-    box-shadow: var(--shadow-lg); animation: slideLeft .22s ease;
-    display: flex; align-items: center; gap: 10px; font-family: 'Be Vietnam Pro', sans-serif;
-  }
+  .inv-toast { position: fixed; top: 24px; right: 24px; z-index: 9999; padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: .88rem; box-shadow: var(--shadow-lg); animation: slideLeft .22s ease; display: flex; align-items: center; gap: 10px; font-family: 'Be Vietnam Pro', sans-serif; }
   @keyframes slideLeft { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
   .toast-ok  { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
   .toast-err { background: #fff1f2; border: 1px solid #fda4af; color: #9f1239; }
 
-  /* ── Loading spinner ── */
   .inv-spin { display: inline-block; width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 6px; }
   @keyframes spin { to { transform:rotate(360deg); } }
-
   .inv-loading-row { padding: 50px; text-align: center; color: var(--c-subtle); }
   .inv-section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--c-accent); margin: 0 0 10px; }
-
-  /* ── Month/year selector ── */
-  .inv-period-bar {
-    display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
-    background: #f0f4ff; padding: 10px 12px; border-radius: 10px;
-    border: 1px solid #d5d9f5;
-  }
+  .inv-period-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; background: #f0f4ff; padding: 10px 12px; border-radius: 10px; border: 1px solid #d5d9f5; }
   .inv-period-label { font-size: .78rem; font-weight: 700; color: var(--c-accent); white-space: nowrap; }
-  .inv-period-sel {
-    padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--c-border);
-    font-size: .85rem; font-family: inherit; outline: none; cursor: pointer;
-    background: white; color: var(--c-text); font-weight: 600;
-    transition: border-color .2s;
-  }
+  .inv-period-sel { padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--c-border); font-size: .85rem; font-family: inherit; outline: none; cursor: pointer; background: white; color: var(--c-text); font-weight: 600; transition: border-color .2s; }
   .inv-period-sel:focus { border-color: var(--c-accent); }
 `;
 
@@ -369,20 +241,17 @@ function CreateForm({ rooms, onCreated, showToast }) {
   const [prevReading, setPrevReading] = useState(null);
   const [prevLoading, setPrevLoading] = useState(false);
 
-  // Meter indexes
   const [prevElec, setPrevElec] = useState('');
   const [currElec, setCurrElec] = useState('');
   const [prevWater, setPrevWater] = useState('');
   const [currWater, setCurrWater] = useState('');
 
-  // Pricing
   const [elecPrice, setElecPrice]   = useState('3500');
   const [waterPrice, setWaterPrice] = useState('15000');
   const [wifiFee, setWifiFee]       = useState('0');
   const [trashFee, setTrashFee]     = useState('0');
   const [roomPrice, setRoomPrice]   = useState('');
 
-  // Result
   const [result, setResult]   = useState(null);
   const [calcLoading, setCalcLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -391,11 +260,9 @@ function CreateForm({ rooms, onCreated, showToast }) {
     return d.toISOString().slice(0, 10);
   });
 
-  // Derived usage
   const elecUsage  = (currElec !== '' && prevElec !== '') ? Math.max(0, Number(currElec) - Number(prevElec)) : null;
   const waterUsage = (currWater !== '' && prevWater !== '') ? Math.max(0, Number(currWater) - Number(prevWater)) : null;
 
-  // ── fetch previous reading when room/month/year changes ──
   const fetchPrev = useCallback(async (rid, m, y) => {
     if (!rid) return;
     setPrevLoading(true);
@@ -419,7 +286,6 @@ function CreateForm({ rooms, onCreated, showToast }) {
     if (roomId) fetchPrev(roomId, month, year);
   }, [roomId, month, year, fetchPrev]);
 
-  // Auto-fill room price
   useEffect(() => {
     if (roomId) {
       const room = rooms.find(r => String(r.roomID || r.id) === String(roomId));
@@ -427,7 +293,6 @@ function CreateForm({ rooms, onCreated, showToast }) {
     }
   }, [roomId, rooms]);
 
-  // ── calculate ──
   const handleCalc = async () => {
     if (!roomId) { showToast('Chọn phòng trước', false); return; }
     if (currElec === '' || currWater === '') { showToast('Nhập chỉ số điện/nước kỳ này', false); return; }
@@ -453,12 +318,11 @@ function CreateForm({ rooms, onCreated, showToast }) {
     } finally { setCalcLoading(false); }
   };
 
-  // ── save invoice ──
   const handleSave = async () => {
     if (!result) return;
     setSaveLoading(true);
     try {
-      // 1. Save meter reading
+      // 1. Lưu meter reading
       const mrRes = await api.post('/meter-readings', {
         roomID: Number(roomId),
         electricityIndex: Number(currElec),
@@ -466,13 +330,12 @@ function CreateForm({ rooms, onCreated, showToast }) {
         recordedDate: new Date().toISOString().slice(0, 10),
       });
 
-      // 2. Get contract for room
-      const contractsRes = await api.get(`/contracts?status=active`).catch(() => ({ data: { data: [] } }));
+      // 2. Lấy contract của phòng
+      const contractsRes = await api.get('/contracts?status=active').catch(() => ({ data: { data: [] } }));
       const contracts = contractsRes.data.data || [];
-      const room = rooms.find(r => String(r.roomID || r.id) === String(roomId));
       const matchedContract = contracts.find(c => String(c.roomID) === String(roomId));
 
-      // 3. Save invoice
+      // 3. Tạo hóa đơn
       const bd = result.breakdown;
       await api.post('/invoices', {
         roomID: Number(roomId),
@@ -490,7 +353,6 @@ function CreateForm({ rooms, onCreated, showToast }) {
       showToast('✅ Tạo hóa đơn thành công!', true);
       setResult(null);
       setCurrElec(''); setCurrWater('');
-      // Re-fetch previous reading so it updates
       await fetchPrev(roomId, month, year);
       onCreated();
     } catch (e) {
@@ -506,7 +368,6 @@ function CreateForm({ rooms, onCreated, showToast }) {
         <span>📋</span> Tạo hóa đơn mới
       </div>
       <div className="inv-panel-body">
-
         {/* Period */}
         <div className="inv-period-bar">
           <span className="inv-period-label">📅 Kỳ:</span>
@@ -542,7 +403,7 @@ function CreateForm({ rooms, onCreated, showToast }) {
 
         <hr className="inv-divider" />
 
-        {/* ── Electricity ── */}
+        {/* Electricity */}
         <div className="inv-index-box">
           <div className="inv-index-label">⚡ Chỉ số điện</div>
           {prevLoading && <div style={{ fontSize: '.8rem', color: 'var(--c-subtle)' }}>Đang tải chỉ số kỳ trước…</div>}
@@ -552,9 +413,7 @@ function CreateForm({ rooms, onCreated, showToast }) {
                 <div className="inv-prev-label">Kỳ trước</div>
                 <div className="inv-prev-val">
                   {prevElec !== '' ? prevElec : '—'}
-                  {prevReading && <div style={{ fontSize: '.68rem', color: 'var(--c-muted)', marginTop: 2 }}>
-                    {fmtDate(prevReading.recordedDate)}
-                  </div>}
+                  {prevReading && <div style={{ fontSize: '.68rem', color: 'var(--c-muted)', marginTop: 2 }}>{fmtDate(prevReading.recordedDate)}</div>}
                 </div>
                 {!prevReading && roomId && <div className="inv-hint warn">⚠ Chưa có chỉ số trước</div>}
               </div>
@@ -578,16 +437,14 @@ function CreateForm({ rooms, onCreated, showToast }) {
           )}
         </div>
 
-        {/* ── Water ── */}
+        {/* Water */}
         <div className="inv-index-box">
           <div className="inv-index-label">💧 Chỉ số nước</div>
           {!prevLoading && (
             <div className="inv-index-grid">
               <div>
                 <div className="inv-prev-label">Kỳ trước</div>
-                <div className="inv-prev-val">
-                  {prevWater !== '' ? prevWater : '—'}
-                </div>
+                <div className="inv-prev-val">{prevWater !== '' ? prevWater : '—'}</div>
                 {!prevReading && roomId && <div className="inv-hint warn">⚠ Chưa có chỉ số trước</div>}
               </div>
               <div>
@@ -615,22 +472,18 @@ function CreateForm({ rooms, onCreated, showToast }) {
         {/* Pricing */}
         <p className="inv-section-title">Đơn giá dịch vụ</p>
         <div className="inv-row2">
-          <div className="inv-field">
-            <label className="inv-label">Giá điện (đ/kWh)</label>
-            <input className="inv-input mono" type="number" value={elecPrice} onChange={e => { setElecPrice(e.target.value); setResult(null); }} />
-          </div>
-          <div className="inv-field">
-            <label className="inv-label">Giá nước (đ/m³)</label>
-            <input className="inv-input mono" type="number" value={waterPrice} onChange={e => { setWaterPrice(e.target.value); setResult(null); }} />
-          </div>
-          <div className="inv-field">
-            <label className="inv-label">Phí Wifi (đ)</label>
-            <input className="inv-input mono" type="number" value={wifiFee} onChange={e => { setWifiFee(e.target.value); setResult(null); }} />
-          </div>
-          <div className="inv-field">
-            <label className="inv-label">Phí rác (đ)</label>
-            <input className="inv-input mono" type="number" value={trashFee} onChange={e => { setTrashFee(e.target.value); setResult(null); }} />
-          </div>
+          {[
+            { label: 'Giá điện (đ/kWh)', val: elecPrice, set: setElecPrice },
+            { label: 'Giá nước (đ/m³)', val: waterPrice, set: setWaterPrice },
+            { label: 'Phí Wifi (đ)', val: wifiFee, set: setWifiFee },
+            { label: 'Phí rác (đ)', val: trashFee, set: setTrashFee },
+          ].map(({ label, val, set }) => (
+            <div key={label} className="inv-field">
+              <label className="inv-label">{label}</label>
+              <input className="inv-input mono" type="number" value={val}
+                onChange={e => { set(e.target.value); setResult(null); }} />
+            </div>
+          ))}
         </div>
 
         <div className="inv-field">
@@ -642,7 +495,7 @@ function CreateForm({ rooms, onCreated, showToast }) {
           {calcLoading ? <><span className="inv-spin" />Đang tính...</> : '🧮 Tính tiền hóa đơn'}
         </button>
 
-        {/* ── Result Preview ── */}
+        {/* Result Preview */}
         {result && (() => {
           const bd = result.breakdown;
           return (
@@ -663,12 +516,9 @@ function CreateForm({ rooms, onCreated, showToast }) {
                 <span className="inv-result-total-lbl">TỔNG CỘNG</span>
                 <span className="inv-result-total-val">{fmt(result.totalAmount)}đ</span>
               </div>
-
-              {/* Verification line */}
               <div style={{ marginTop: 10, fontSize: '.76rem', color: 'var(--c-muted)', background: '#f0f4ff', borderRadius: 7, padding: '7px 10px' }}>
                 ✔ Kiểm tra: ({bd.electricityUsage} × {fmt(bd.electricityUnitPrice)} + {bd.waterUsage} × {fmt(bd.waterUnitPrice)}) + {fmt(bd.roomPrice)} + {fmt(bd.serviceAmount)} = <strong>{fmt(result.totalAmount)}đ</strong>
               </div>
-
               <button className="inv-btn-save" onClick={handleSave} disabled={saveLoading}>
                 {saveLoading ? <><span className="inv-spin" />Đang lưu...</> : '💾 Lưu hóa đơn'}
               </button>
@@ -688,89 +538,74 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
   const [tab, setTab]           = useState('all');
   const [search, setSearch]     = useState('');
   const [selected, setSelected] = useState(null);
-  const [month, setMonth]       = useState(0);   // 0 = all months
+  const [month, setMonth]       = useState(0);
   const [year, setYear]         = useState(CUR_YEAR);
 
-  const fetchInvoices = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Fetch all rooms first, then get invoices per room via contracts
-      const roomsRes = await api.get('/rooms');
-      const allRooms = roomsRes.data.rooms || [];
-
-      // Get contracts to map room → contract
-      const contractsRes = await api.get('/contracts').catch(() => ({ data: { data: [] } }));
-      const contracts = contractsRes.data.data || [];
-
-      // Build invoice list from each active contract
-      // In this system invoices are linked via contract_id / room_id
-      // We'll fetch all invoices from active rooms
-      const roomIds = allRooms.map(r => r.roomID || r.id);
-
-      // Since there's no GET /invoices list endpoint for landlord in the current API,
-      // we build from contract-scoped invoice data.
-      // Fallback: use the contracts data and enrich with room info
-      const enriched = [];
-      for (const contract of contracts) {
-        try {
-          // Try to get invoices if we have a contract API for it
-          const invRes = await api.get(`/invoices?contractID=${contract.contractID}`).catch(() => null);
-          if (invRes?.data?.data) {
-            invRes.data.data.forEach(inv => enriched.push({ ...inv, room_name: contract.roomName }));
-          }
-        } catch { /* skip */ }
-      }
-
-      // Alternatively, get invoices directly from the rooms we know about
-      // Since backend returns invoices via /tenants/invoices for tenants only,
-      // let's use a direct SQL-backed approach via the room list:
-      // We'll build fake invoice list from the data we have
-      // Actually the real endpoint is POST /invoices — list endpoint needs to be added.
-      // For now, fetch from a composite approach.
-
-      setInvoices(enriched);
-    } catch {
-      setInvoices([]);
-    } finally { setLoading(false); }
-  }, []);
-
-  // Better: use a dedicated landlord invoice endpoint
+  // ── Fetch hóa đơn trực tiếp từ endpoint /invoices (landlord) ──────────────
   const fetchLandlordInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const [roomsRes, contractsRes] = await Promise.all([
-        api.get('/rooms'),
-        api.get('/contracts'),
-      ]);
-      const rooms = roomsRes.data.rooms || [];
-      const contracts = contractsRes.data.data || [];
-      const roomMap = Object.fromEntries(rooms.map(r => [String(r.roomID || r.id), r]));
+      // Dùng GET /invoices — endpoint của landlord, filter theo year nếu cần
+      const params = new URLSearchParams();
+      if (year) params.append('year', year);
+      if (month > 0) params.append('month', month);
 
-      // Collect all invoices via a single batched query approach
-      // Since API doesn't expose GET /landlord/invoices, we try individual room invoice queries
-      const allInvoices = [];
-      await Promise.allSettled(
-        contracts.map(async (c) => {
-          try {
-            // Try fetching invoices for this contract (if endpoint exists)
-            const res = await api.get(`/invoices?roomID=${c.roomID}`).catch(() => null);
-            if (res?.data?.data) {
-              res.data.data.forEach(inv => allInvoices.push({
-                ...inv,
-                room_name: c.roomName || roomMap[String(c.roomID)]?.name || `Phòng ${c.roomID}`,
-              }));
-            }
-          } catch { /* skip */ }
-        })
-      );
+      const res = await api.get(`/invoices?${params.toString()}`);
+      const data = res.data.data || [];
 
-      // If nothing fetched (no GET endpoint), show empty with create prompt
-      allInvoices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      setInvoices(allInvoices);
-    } catch {
-      setInvoices([]);
+      // Dedup theo id để tránh trùng
+      const seen = new Set();
+      const unique = data.filter(inv => {
+        if (seen.has(inv.id)) return false;
+        seen.add(inv.id);
+        return true;
+      });
+
+      // Sắp xếp mới nhất lên đầu
+      unique.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setInvoices(unique);
+    } catch (err) {
+      // Nếu endpoint chưa có, thử fallback
+      console.warn('GET /invoices thất bại, thử fallback:', err.message);
+      try {
+        const [roomsRes, contractsRes] = await Promise.all([
+          api.get('/rooms'),
+          api.get('/contracts'),
+        ]);
+        const contracts = contractsRes.data.data || [];
+        const roomMap = Object.fromEntries(
+          (roomsRes.data.rooms || []).map(r => [String(r.roomID || r.id), r])
+        );
+
+        const allInvoices = [];
+        const seen = new Set();
+
+        await Promise.allSettled(
+          contracts.map(async (c) => {
+            try {
+              const invRes = await api.get(`/invoices?roomID=${c.roomID}`);
+              if (invRes?.data?.data) {
+                invRes.data.data.forEach(inv => {
+                  if (!seen.has(inv.id)) {
+                    seen.add(inv.id);
+                    allInvoices.push({
+                      ...inv,
+                      room_name: c.roomName || roomMap[String(c.roomID)]?.name || `Phòng ${c.roomID}`,
+                    });
+                  }
+                });
+              }
+            } catch { /* skip */ }
+          })
+        );
+
+        allInvoices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setInvoices(allInvoices);
+      } catch {
+        setInvoices([]);
+      }
     } finally { setLoading(false); }
-  }, []);
+  }, [year, month]);
 
   useEffect(() => { fetchLandlordInvoices(); }, [fetchLandlordInvoices, reload]);
 
@@ -783,8 +618,7 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
   const filtered = invoices.filter(inv => {
     if (tab === 'paid'   && inv.status !== 'paid')   return false;
     if (tab === 'unpaid' && inv.status !== 'unpaid') return false;
-    if (month > 0 && Number(inv.month) !== month) return false;
-    if (Number(inv.year) !== year) return false;
+    if (tab === 'partial' && inv.status !== 'partial') return false;
     const q = search.trim().toLowerCase();
     if (q) {
       const rm = (inv.room_name || '').toLowerCase();
@@ -797,7 +631,7 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
   const stats = {
     total: invoices.length,
     paid: invoices.filter(i => i.status === 'paid').length,
-    unpaid: invoices.filter(i => i.status === 'unpaid').length,
+    unpaid: invoices.filter(i => i.status === 'unpaid' || i.status === 'partial').length,
     revenue: invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total_amount || 0), 0),
   };
 
@@ -808,10 +642,10 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
       {/* Stats */}
       <div className="inv-stats">
         {[
-          { icon: '📋', val: stats.total,             lbl: 'Tổng hóa đơn',   bg: '#eef0fb', ic: '#4f46e5' },
-          { icon: '✅', val: stats.paid,              lbl: 'Đã thanh toán',  bg: '#d1fae5', ic: '#059669' },
-          { icon: '⏳', val: stats.unpaid,            lbl: 'Chưa thanh toán',bg: '#fee2e2', ic: '#dc2626' },
-          { icon: '💰', val: `${fmt(stats.revenue)}đ`,lbl: 'Doanh thu',      bg: '#fef9c3', ic: '#ca8a04' },
+          { icon: '📋', val: stats.total,              lbl: 'Tổng hóa đơn',   bg: '#eef0fb', ic: '#4f46e5' },
+          { icon: '✅', val: stats.paid,               lbl: 'Đã thanh toán',  bg: '#d1fae5', ic: '#059669' },
+          { icon: '⏳', val: stats.unpaid,             lbl: 'Chưa thanh toán',bg: '#fee2e2', ic: '#dc2626' },
+          { icon: '💰', val: `${fmt(stats.revenue)}đ`, lbl: 'Doanh thu',      bg: '#fef9c3', ic: '#ca8a04' },
         ].map(({ icon, val, lbl, bg, ic }) => (
           <div key={lbl} className="inv-stat">
             <div className="inv-stat-icon" style={{ background: bg, color: ic }}>{icon}</div>
@@ -827,7 +661,7 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
       <div className="inv-panel">
         <div className="inv-toolbar">
           <div className="inv-tab-group">
-            {[['all','Tất cả'],['unpaid','Chưa TT'],['paid','Đã TT']].map(([k,l]) => (
+            {[['all','Tất cả'],['unpaid','Chưa TT'],['partial','Một phần'],['paid','Đã TT']].map(([k,l]) => (
               <button key={k} className={`inv-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -870,6 +704,7 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
             <tbody>
               {filtered.map(inv => {
                 const paid = inv.status === 'paid';
+                const partial = inv.status === 'partial';
                 const over = isOverdue(inv);
                 return (
                   <tr key={inv.id} className="inv-tr" onClick={() => setSelected(inv)}>
@@ -886,8 +721,8 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
                     <td className="inv-td" style={{ fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{fmt(inv.total_amount)}đ</td>
                     <td className="inv-td" style={{ fontSize: '.82rem', color: over ? 'var(--c-red)' : 'var(--c-muted)' }}>{fmtDate(inv.due_date)}</td>
                     <td className="inv-td">
-                      <span className={`inv-badge ${paid ? 'badge-paid' : over ? 'badge-overdue' : 'badge-unpaid'}`}>
-                        {paid ? '✅ Đã TT' : over ? '⏰ Quá hạn' : '⏳ Chưa TT'}
+                      <span className={`inv-badge ${paid ? 'badge-paid' : partial ? 'badge-partial' : over ? 'badge-overdue' : 'badge-unpaid'}`}>
+                        {paid ? '✅ Đã TT' : partial ? '🔄 Một phần' : over ? '⏰ Quá hạn' : '⏳ Chưa TT'}
                       </span>
                     </td>
                     <td className="inv-td">
@@ -925,7 +760,7 @@ export default function Invoices() {
     toastTimer.current = setTimeout(() => setToast(null), 3500);
   }, []);
 
-  // Fetch occupied rooms for create form
+  // Fetch các phòng đang occupied cho form tạo hóa đơn
   useEffect(() => {
     api.get('/rooms?status=occupied')
       .then(r => setRooms(r.data.rooms || []))
@@ -934,17 +769,23 @@ export default function Invoices() {
 
   const handleMarkPaid = async (id, method) => {
     try {
-      await api.put(`/invoices/${id}/pay`, { payment_method: method, status: 'paid' })
-        .catch(() =>
-          // fallback endpoint variation
-          api.patch(`/invoices/${id}`, { status: 'paid', payment_status: 'Paid', payment_method: method, paid_at: new Date().toISOString() })
-        );
+      await api.put(`/invoices/${id}/pay`, { payment_method: method });
       showToast('✅ Đã ghi nhận thanh toán!', true);
       setReload(r => r + 1);
-    } catch {
-      // Try direct DB update via a generic endpoint
-      showToast('Đã cập nhật trạng thái', true);
-      setReload(r => r + 1);
+    } catch (err) {
+      // Thử endpoint patch nếu put thất bại
+      try {
+        await api.patch(`/invoices/${id}`, {
+          status: 'paid',
+          payment_status: 'Paid',
+          payment_method: method,
+          paid_at: new Date().toISOString(),
+        });
+        showToast('✅ Đã cập nhật thanh toán!', true);
+        setReload(r => r + 1);
+      } catch {
+        showToast('❌ Cập nhật thất bại', false);
+      }
     }
   };
 
