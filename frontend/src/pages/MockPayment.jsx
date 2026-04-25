@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import api from '../api';
+import axios from 'axios'; // Dùng axios thay cho api nội bộ
+
+// Thêm dòng này để gọi đúng URL backend
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const styles = {
   page: {
@@ -99,7 +102,8 @@ export default function MockPayment() {
       }
 
       try {
-        const res = await api.get(`/invoices/mock-payment/${invoiceId}`);
+        // ĐÃ SỬA: Dùng axios thay vì api
+        const res = await axios.get(`${API_BASE}/invoices/mock-payment/${invoiceId}`);
         const data = res.data?.data;
         setInvoice(data || null);
 
@@ -128,7 +132,8 @@ export default function MockPayment() {
     setSubmitting(true);
 
     try {
-      const res = await api.post('/invoices/mock-payment/confirm', { invoiceId, amount });
+      // ĐÃ SỬA: Dùng axios thay vì api
+      const res = await axios.post(`${API_BASE}/invoices/mock-payment/confirm`, { invoiceId, amount });
       const payload = res.data?.data;
       const statusText = payload?.invoiceStatus === 'paid'
         ? 'Thanh toán đủ thành công. Đang quay lại RPMS...'
