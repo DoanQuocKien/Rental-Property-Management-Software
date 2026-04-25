@@ -25,22 +25,22 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   const parsedRentalPrice = Number(rentalPrice);
 
   if (!Number.isInteger(parsedRoomID) || !Number.isInteger(parsedTenantID)) {
-    return res.status(400).json({ status: 'error', message: 'roomID and tenantID are required.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã phòng và Mã người thuê là những trường bắt buộc.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   if (!isValidDate(startDate) || !isValidDate(endDate)) {
-    return res.status(400).json({ status: 'error', message: 'startDate and endDate must be valid dates.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Ngày bắt đầu và Ngày kết thúc không hợp lệ.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   const normalizedStartDate = toIsoDate(startDate);
   const normalizedEndDate   = toIsoDate(endDate);
 
   if (new Date(normalizedEndDate) <= new Date(normalizedStartDate)) {
-    return res.status(400).json({ status: 'error', message: 'endDate must be after startDate.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Ngày kết thúc phải sau ngày bắt đầu.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   if (!Number.isFinite(parsedDeposit) || parsedDeposit < 0 || !Number.isFinite(parsedRentalPrice) || parsedRentalPrice <= 0) {
-    return res.status(400).json({ status: 'error', message: 'deposit and rentalPrice must be positive numbers.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Tiền cọc và giá thuê phải là các số dương.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   try {
@@ -49,7 +49,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
       [parsedTenantID]
     );
     if (!tenant || !['tenant', 'Tenant'].includes(tenant.role)) {
-      return res.status(404).json({ status: 'error', message: 'Tenant not found or account not activated.', errorCode: 'TENANT_INVALID' });
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy người thuê hoặc tài khoản người thuê chưa được kích hoạt.', errorCode: 'TENANT_INVALID' });
     }
 
     const room = await db.getAsync(
@@ -57,10 +57,10 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
       [parsedRoomID]
     );
     if (!room || room.landlord_id !== req.user.id) {
-      return res.status(404).json({ status: 'error', message: 'Room not found.', errorCode: 'ROOM_NOT_FOUND' });
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy phòng.', errorCode: 'ROOM_NOT_FOUND' });
     }
     if (String(room.status || '').toLowerCase() !== 'available') {
-      return res.status(400).json({ status: 'error', message: 'Room is not available for rent.', errorCode: 'ROOM_UNAVAILABLE' });
+      return res.status(400).json({ status: 'error', message: 'Phòng không khả dụng để cho thuê.', errorCode: 'ROOM_UNAVAILABLE' });
     }
 
     const existingContract = await db.getAsync(
@@ -68,7 +68,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
       [parsedTenantID]
     );
     if (existingContract) {
-      return res.status(400).json({ status: 'error', message: 'Tenant already has an active contract.', errorCode: 'TENANT_HAS_ACTIVE_CONTRACT' });
+      return res.status(400).json({ status: 'error', message: 'Người thuê đã có hợp đồng hoạt động.', errorCode: 'TENANT_HAS_ACTIVE_CONTRACT' });
     }
 
     await db.runAsync('BEGIN TRANSACTION');
@@ -88,7 +88,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 
     return res.status(201).json({
       status: 'success',
-      message: 'Contract created successfully. Room status updated to Occupied.',
+      message: 'Hợp đồng được tạo thành công. Trạng thái phòng đã được cập nhật thành Đã thuê.',
       data: {
         contractID:  insertResult.lastID,
         roomID:      parsedRoomID,
@@ -103,7 +103,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   } catch (error) {
     await db.runAsync('ROLLBACK').catch(() => {});
     console.error('Contract creation error:', error);
-    return res.status(500).json({ status: 'error', message: 'Failed to create contract.', errorCode: 'CONTRACT_CREATE_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Tạo hợp đồng thất bại.', errorCode: 'CONTRACT_CREATE_FAILED' });
   }
 });
 
@@ -150,7 +150,7 @@ router.get('/', authenticateToken, requireRole('landlord'), async (req, res) => 
     return res.json({ status: 'success', data: contracts });
   } catch (err) {
     console.error('Get contracts error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch contracts.', errorCode: 'FETCH_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi tải danh sách hợp đồng.', errorCode: 'FETCH_FAILED' });
   }
 });
 
@@ -192,7 +192,7 @@ router.get('/my-contract', authenticateToken, async (req, res) => {
     return res.json({ status: 'success', data: contract || null });
   } catch (err) {
     console.error('Get my-contract error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch contract.', errorCode: 'FETCH_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi tải hợp đồng.', errorCode: 'FETCH_FAILED' });
   }
 });
 
@@ -203,7 +203,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   const contractId = Number(req.params.id);
 
   if (!Number.isInteger(contractId) || contractId <= 0) {
-    return res.status(400).json({ status: 'error', message: 'Invalid contract ID.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã hợp đồng không hợp lệ.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   try {
@@ -239,13 +239,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
     );
 
     if (!contract) {
-      return res.status(404).json({ status: 'error', message: 'Contract not found or access denied.', errorCode: 'CONTRACT_NOT_FOUND' });
+      return res.status(404).json({ status: 'error', message: 'Hợp đồng không tìm thấy hoặc truy cập bị từ chối.', errorCode: 'CONTRACT_NOT_FOUND' });
     }
 
     return res.json({ status: 'success', data: contract });
   } catch (err) {
     console.error('Get contract detail error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch contract.', errorCode: 'FETCH_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi tải hợp đồng.', errorCode: 'FETCH_FAILED' });
   }
 });
 
@@ -256,7 +256,7 @@ router.put('/:id/terminate', authenticateToken, requireRole('landlord'), async (
   const contractId = Number(req.params.id);
 
   if (!Number.isInteger(contractId) || contractId <= 0) {
-    return res.status(400).json({ status: 'error', message: 'Invalid contract ID.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã hợp đồng không hợp lệ.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   try {
@@ -269,10 +269,10 @@ router.put('/:id/terminate', authenticateToken, requireRole('landlord'), async (
     );
 
     if (!contract) {
-      return res.status(404).json({ status: 'error', message: 'Contract not found.', errorCode: 'CONTRACT_NOT_FOUND' });
+      return res.status(404).json({ status: 'error', message: 'Hợp đồng không tìm thấy hoặc truy cập bị từ chối.', errorCode: 'CONTRACT_NOT_FOUND' });
     }
     if (contract.status !== 'active') {
-      return res.status(400).json({ status: 'error', message: 'Only active contracts can be terminated.', errorCode: 'CONTRACT_NOT_ACTIVE' });
+      return res.status(400).json({ status: 'error', message: 'Chỉ có thể chấm dứt các hợp đồng đang hoạt động.', errorCode: 'CONTRACT_NOT_ACTIVE' });
     }
 
     await db.runAsync('BEGIN TRANSACTION');
@@ -286,11 +286,11 @@ router.put('/:id/terminate', authenticateToken, requireRole('landlord'), async (
     );
     await db.runAsync('COMMIT');
 
-    return res.json({ status: 'success', message: 'Contract terminated successfully. Room status updated to Available.' });
+    return res.json({ status: 'success', message: 'Hợp đồng đã được chấm dứt thành công. Trạng thái phòng đã được cập nhật thành Available.' });
   } catch (err) {
     await db.runAsync('ROLLBACK').catch(() => {});
-    console.error('Terminate contract error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to terminate contract.', errorCode: 'TERMINATE_FAILED' });
+    console.error('Lỗi khi chấm dứt hợp đồng:', err);
+    return res.status(500).json({ status: 'error', message: 'Không thể chấm dứt hợp đồng.', errorCode: 'TERMINATE_FAILED' });
   }
 });
 

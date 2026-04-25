@@ -423,7 +423,7 @@ function CreateForm({ rooms, onCreated, showToast }) {
                   className={`inv-input mono ${currElec !== '' && Number(currElec) < Number(prevElec) ? 'err' : currElec !== '' ? 'ok' : ''}`}
                   type="number" min={prevElec || 0} value={currElec}
                   onChange={e => { setCurrElec(e.target.value); setResult(null); }}
-                  placeholder={`> ${prevElec || 0}`}
+                  placeholder={`>= ${prevElec || 0}`}
                 />
               </div>
             </div>
@@ -453,7 +453,7 @@ function CreateForm({ rooms, onCreated, showToast }) {
                   className={`inv-input mono ${currWater !== '' && Number(currWater) < Number(prevWater) ? 'err' : currWater !== '' ? 'ok' : ''}`}
                   type="number" min={prevWater || 0} value={currWater}
                   onChange={e => { setCurrWater(e.target.value); setResult(null); }}
-                  placeholder={`> ${prevWater || 0}`}
+                  placeholder={`>= ${prevWater || 0}`}
                 />
               </div>
             </div>
@@ -532,7 +532,7 @@ function CreateForm({ rooms, onCreated, showToast }) {
 }
 
 // ─── Invoice List ─────────────────────────────────────────────────────────────
-function InvoiceList({ reload, onMarkPaid, showToast }) {
+function InvoiceList({ reload, onMarkPaid, showToast, onDeleteInvoice }) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState('all');
@@ -696,7 +696,7 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
           <table className="inv-table">
             <thead>
               <tr>
-                {['#ID','Kỳ','Phòng','Tiền phòng','Điện','Nước','Tổng tiền','Hạn TT','Trạng thái',''].map(h => (
+                {['#ID','Kỳ','Phòng','Tiền phòng','Điện','Nước','Tổng tiền','Hạn TT','Trạng thái','',''].map(h => (
                   <th key={h} className="inv-th">{h}</th>
                 ))}
               </tr>
@@ -725,8 +725,28 @@ function InvoiceList({ reload, onMarkPaid, showToast }) {
                         {paid ? '✅ Đã TT' : partial ? '🔄 Một phần' : over ? '⏰ Quá hạn' : '⏳ Chưa TT'}
                       </span>
                     </td>
-                    <td className="inv-td">
-                      <span style={{ color: 'var(--c-accent)', fontSize: '.8rem', fontWeight: 700 }}>Chi tiết →</span>
+                    <td className="inv-td" onClick={(e) => e.stopPropagation()}>
+                      <span style={{ color: 'var(--c-accent)', fontSize: '.8rem', fontWeight: 700, cursor: 'pointer' }}>Chi tiết →</span>
+                    </td>
+                    <td className="inv-td" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => onDeleteInvoice(inv.id)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--c-red)',
+                          fontSize: '.85rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          transition: 'opacity .2s',
+                        }}
+                        onMouseEnter={(e) => e.target.style.opacity = '0.7'}
+                        onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        title="Xóa hóa đơn"
+                      >
+                        🗑️ Xóa
+                      </button>
                     </td>
                   </tr>
                 );
@@ -789,6 +809,19 @@ export default function Invoices() {
     }
   };
 
+  const handleDeleteInvoice = async (id) => {
+    if (!window.confirm('Bạn chắc chắn muốn xóa hóa đơn này? Hành động này không thể hoàn tác.')) {
+      return;
+    }
+    try {
+      await api.delete(`/invoices/${id}`);
+      showToast('✅ Đã xóa hóa đơn!', true);
+      setReload(r => r + 1);
+    } catch (err) {
+      showToast(err.response?.data?.message || '❌ Xóa hóa đơn thất bại', false);
+    }
+  };
+
   return (
     <div className="inv-root">
       <style>{STYLES}</style>
@@ -813,6 +846,7 @@ export default function Invoices() {
             reload={reload}
             onMarkPaid={handleMarkPaid}
             showToast={showToast}
+            onDeleteInvoice={handleDeleteInvoice}
           />
         </div>
       </div>

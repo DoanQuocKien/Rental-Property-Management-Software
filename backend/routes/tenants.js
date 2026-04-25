@@ -52,7 +52,13 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 });
 
 // GET /api/tenants/profile - Lấy thông tin cá nhân người thuê
-router.get('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
+router.get('/profile', authenticateToken, (req, res) => {
+  // Allow both tenants and landlords to get their profile
+  const allowedRoles = ['tenant', 'landlord', 'Tenant', 'Landlord'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   db.get('SELECT id, name, email, phone, citizen_id, permanent_address, date_of_birth, gender, created_at FROM users WHERE id = ?',
     [req.user.id],
     (err, user) => {
@@ -63,8 +69,14 @@ router.get('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
   );
 });
 
-// PUT /api/tenants/profile - Cập nhật thông tin cá nhân
-router.put('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
+// PUT /api/tenants/profile - Cập nhật thông tin cá nhân (for both tenants and landlords)
+router.put('/profile', authenticateToken, (req, res) => {
+  // Allow both tenants and landlords to update their profile
+  const allowedRoles = ['tenant', 'landlord', 'Tenant', 'Landlord'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   const { name, phone, citizen_id, permanent_address, date_of_birth, gender } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Tên không được để trống' });

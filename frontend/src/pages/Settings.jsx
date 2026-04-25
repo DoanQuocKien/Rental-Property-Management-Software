@@ -27,16 +27,20 @@ function AccountTab({ form, onChange }) {
     setError('');
     setSuccess('');
     try {
-      // Gọi API cập nhật thông tin landlord
-      // Dùng endpoint /tenants/profile nếu là tenant, còn landlord dùng PUT /auth/profile
-      // Hiện tại backend chưa có endpoint riêng cho landlord profile,
-      // nên ta sẽ cập nhật qua users table trực tiếp bằng cách dùng endpoint có sẵn
+      // Update user profile (works for both landlords and tenants)
       await api.put('/tenants/profile', {
         name: form.name,
         phone: form.phone,
         citizen_id: form.citizen_id,
         permanent_address: form.permanent_address,
       });
+      // Save to localStorage for persistence when navigating to other tabs/sections
+      localStorage.setItem('accountSettings', JSON.stringify({
+        name: form.name,
+        phone: form.phone,
+        citizen_id: form.citizen_id,
+        permanent_address: form.permanent_address,
+      }));
       setSuccess('Đã lưu thông tin thành công!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -116,12 +120,29 @@ function AccountTab({ form, onChange }) {
 // ── Property Tab ──────────────────────────────────────────────────────────────
 function PropertyTab({ form, onChange }) {
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Lưu vào localStorage vì backend chưa có endpoint cho property settings
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
+    setSuccess('');
+
+    // Validate required fields
+    if (!form.property_name?.trim()) {
+      setError('Tên khu trọ là bắt buộc');
+      setSaving(false);
+      return;
+    }
+
+    if (!form.address?.trim()) {
+      setError('Địa chỉ là bắt buộc');
+      setSaving(false);
+      return;
+    }
+
     try {
       localStorage.setItem('propertySettings', JSON.stringify(form));
       await new Promise((r) => setTimeout(r, 400));
@@ -149,6 +170,12 @@ function PropertyTab({ form, onChange }) {
         </div>
       )}
 
+      {error && (
+        <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#742a2a', fontSize: '0.9rem' }}>
+          ⚠️ {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '24px' }}>
           <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -157,11 +184,11 @@ function PropertyTab({ form, onChange }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Tên khu trọ *</label>
-              <input type="text" {...field('property_name')} placeholder="Ví dụ: Khu trọ Nguyễn Huệ" style={inputStyle()} />
+              <input type="text" {...field('property_name')} placeholder="Ví dụ: Khu trọ Nguyễn Huệ" style={inputStyle()} required />
             </div>
             <div>
-              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Địa chỉ</label>
-              <input type="text" {...field('address')} placeholder="123 Đường ABC, Quận 1, TP.HCM" style={inputStyle()} />
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Địa chỉ *</label>
+              <input type="text" {...field('address')} placeholder="123 Đường ABC, Quận 1, TP.HCM" style={inputStyle()} required />
             </div>
             <div>
               <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Số tầng</label>
@@ -409,12 +436,17 @@ export default function Settings() {
     try { return JSON.parse(localStorage.getItem('propertySettings') || '{}'); } catch { return {}; }
   })();
 
+  // Load saved account settings từ localStorage to persist after navigation
+  const savedAccount = (() => {
+    try { return JSON.parse(localStorage.getItem('accountSettings') || '{}'); } catch { return {}; }
+  })();
+
   const [accountForm, setAccountForm] = useState({
-    name: user?.fullName || user?.name || '',
+    name: savedAccount.name || user?.fullName || user?.name || '',
     email: user?.email || '',
-    phone: user?.phoneNumber || '',
-    citizen_id: user?.citizenID || '',
-    permanent_address: user?.permanentAddress || '',
+    phone: savedAccount.phone || user?.phoneNumber || '',
+    citizen_id: savedAccount.citizen_id || user?.citizenID || '',
+    permanent_address: savedAccount.permanent_address || user?.permanentAddress || '',
   });
 
   const [propertyForm, setPropertyForm] = useState({
