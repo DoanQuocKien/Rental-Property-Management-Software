@@ -233,6 +233,7 @@ db.serialize(() => {
   ensureColumn('maintenance_requests', 'assigned_to', 'INTEGER');
   ensureColumn('maintenance_requests', 'resolution_note', 'TEXT');
   ensureColumn('maintenance_requests', 'issue_photo', 'TEXT');
+  ensureColumn('maintenance_requests', 'cost', 'REAL DEFAULT 0');
 
   db.run(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
