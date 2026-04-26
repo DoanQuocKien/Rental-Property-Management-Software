@@ -442,4 +442,133 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
   }
 });
 
+// GET /api/landlord/statistics/revenue
+// Lấy tổng doanh thu theo tháng/năm
+router.get('/statistics/revenue', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const revenueData = await db.allAsync(
+      `SELECT
+        i.month,
+        i.year,
+        SUM(i.total_amount) as totalRevenue
+       FROM invoices i
+       JOIN rooms r ON i.room_id = r.id
+       WHERE r.landlord_id = ? AND (LOWER(i.status) = 'paid' OR LOWER(i.payment_status) = 'paid')
+       GROUP BY i.year, i.month
+       ORDER BY i.year DESC, i.month DESC`,
+      [req.user.id]
+    );
+
+    return res.json({
+      status: 'success',
+      data: revenueData,
+    });
+  } catch (err) {
+    console.error('Get revenue statistics error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch revenue statistics.',
+      errorCode: 'FETCH_FAILED',
+    });
+  }
+});
+
+// GET /api/landlord/statistics/repair-costs
+// Lấy tổng chi phí sửa chữa theo tháng/năm
+router.get('/statistics/repair-costs', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const costData = await db.allAsync(
+      `SELECT
+        CAST(strftime('%m', mr.updated_at) AS INTEGER) as month,
+        CAST(strftime('%Y', mr.updated_at) AS INTEGER) as year,
+        SUM(mr.cost) as totalCost
+       FROM maintenance_requests mr
+       JOIN rooms r ON mr.room_id = r.id
+       WHERE r.landlord_id = ? AND LOWER(mr.status) = 'completed' AND mr.cost > 0
+       GROUP BY year, month
+       ORDER BY year DESC, month DESC`,
+      [req.user.id]
+    );
+
+    return res.json({
+      status: 'success',
+      data: costData,
+    });
+  } catch (err) {
+    console.error('Get repair costs statistics error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch repair costs statistics.',
+      errorCode: 'FETCH_FAILED',
+    });
+  }
+});
+
+// GET /api/landlord/statistics/debt-tenants
+// Lọc ra danh sách các khách thuê đang nợ tiền
+router.get('/statistics/debt-tenants', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const debtInvoices = await db.allAsync(
+      `SELECT
+        u.id as tenantId,
+        COALESCE(u.full_name, u.name) as fullName,
+        u.email,
+        u.phone_number as phoneNumber,
+        r.name as roomName,
+        r.id as roomId,
+        i.id as invoiceId,
+        i.month,
+        i.year,
+        i.total_amount as amountOwed,
+        i.due_date as dueDate
+       FROM invoices i
+       JOIN rooms r ON i.room_id = r.id
+       /* Sometimes invoices.contract_id is null? It should be linked to contract or room. Let's join contract via invoice or room. 
+          Assuming invoices are linked to the tenant via lease_contracts or direct tenant link isn't strictly there, but contract_id is: */
+       JOIN lease_contracts lc ON i.contract_id = lc.id
+       JOIN users u ON lc.tenant_id = u.id
+       WHERE r.landlord_id = ? AND (LOWER(i.status) = 'unpaid' OR LOWER(i.payment_status) = 'unpaid')
+       ORDER BY i.due_date ASC`,
+      [req.user.id]
+    );
+
+    // Grouping by tenant
+    const tenantsMap = {};
+    debtInvoices.forEach(row => {
+      if (!tenantsMap[row.tenantId]) {
+        tenantsMap[row.tenantId] = {
+          tenantId: row.tenantId,
+          fullName: row.fullName,
+          email: row.email,
+          phoneNumber: row.phoneNumber,
+          totalDebt: 0,
+          invoices: []
+        };
+      }
+      tenantsMap[row.tenantId].invoices.push({
+        invoiceId: row.invoiceId,
+        roomId: row.roomId,
+        roomName: row.roomName,
+        month: row.month,
+        year: row.year,
+        amountOwed: row.amountOwed,
+        dueDate: row.dueDate
+      });
+      tenantsMap[row.tenantId].totalDebt += row.amountOwed;
+    });
+
+    return res.json({
+      status: 'success',
+      data: Object.values(tenantsMap),
+    });
+  } catch (err) {
+    console.error('Get debt tenants statistics error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch debt tenants statistics.',
+      errorCode: 'FETCH_FAILED',
+    });
+  }
+});
+
 module.exports = router;

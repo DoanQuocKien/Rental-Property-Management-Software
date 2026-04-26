@@ -240,6 +240,7 @@ db.serialize(() => {
   ensureColumn('maintenance_requests', 'assigned_to', 'INTEGER');
   ensureColumn('maintenance_requests', 'resolution_note', 'TEXT');
   ensureColumn('maintenance_requests', 'issue_photo', 'TEXT');
+  ensureColumn('maintenance_requests', 'cost', 'REAL DEFAULT 0');
 
   db.run(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -271,6 +272,22 @@ db.serialize(() => {
   `);
 
   db.run('CREATE INDEX IF NOT EXISTS idx_revoked_access_expires_at ON revoked_access_tokens(expires_at)');
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER NOT NULL,
+      room_id INTEGER,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sender_id) REFERENCES users(id),
+      FOREIGN KEY (room_id) REFERENCES rooms(id)
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_sender_id ON notifications(sender_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_room_id ON notifications(room_id)');
 
   if (!tokenCleanupInterval) {
     tokenCleanupInterval = setInterval(() => {
@@ -343,7 +360,7 @@ db.serialize(() => {
         await db.runAsync('COMMIT');
         console.log(`Seeded demo rooms for ${landlords.length} landlord account(s).`);
       } catch (seedError) {
-        await db.runAsync('ROLLBACK').catch(() => {});
+        await db.runAsync('ROLLBACK').catch(() => { });
         throw seedError;
       }
     } catch (seedError) {
