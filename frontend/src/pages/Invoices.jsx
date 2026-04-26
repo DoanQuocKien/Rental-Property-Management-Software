@@ -350,7 +350,12 @@ function CreateForm({ rooms, onCreated, showToast }) {
         dueDate,
       });
 
-      showToast('✅ Tạo hóa đơn thành công!', true);
+      // Show appropriate toast based on whether it's first reading
+      const successMsg = !prevReading
+        ? '✅ Đã lưu chỉ số kỳ đầu tiên và tạo hóa đơn thành công!'
+        : '✅ Tạo hóa đơn thành công!';
+      showToast(successMsg, true);
+      
       setResult(null);
       setCurrElec(''); setCurrWater('');
       await fetchPrev(roomId, month, year);
@@ -815,7 +820,7 @@ export default function Invoices() {
     }
     try {
       await api.delete(`/invoices/${id}`);
-      showToast('✅ Đã xóa hóa đơn!', true);
+      showToast('✅ Xóa hóa đơn và chỉ số thành công!', true);
       setReload(r => r + 1);
     } catch (err) {
       showToast(err.response?.data?.message || '❌ Xóa hóa đơn thất bại', false);

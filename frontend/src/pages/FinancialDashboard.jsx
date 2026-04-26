@@ -35,12 +35,12 @@ const STYLES = `
     font-size: 2rem;
     font-weight: 800;
     margin: 0 0 8px;
-    color: #1a1f2e;
+    color: #fff;
   }
 
   .dashboard-header p {
     font-size: 0.9rem;
-    color: #64748b;
+    color: #fff;
     margin: 0;
   }
 

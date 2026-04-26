@@ -49,10 +49,12 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
       [parsedRoomID]
     );
 
+    const isFirstReading = !prevReading;
     const prevElectricity = prevReading ? prevReading.electricity_index : 0;
     const prevWater = prevReading ? prevReading.water_index : 0;
 
-    if (eIndex < prevElectricity || wIndex < prevWater) {
+    // For non-first readings, validate that indexes don't decrease
+    if (!isFirstReading && (eIndex < prevElectricity || wIndex < prevWater)) {
       return res.status(400).json({
         status: 'error',
         message: 'Chỉ số tháng mới không thể nhỏ hơn chỉ số tháng trước đó.',

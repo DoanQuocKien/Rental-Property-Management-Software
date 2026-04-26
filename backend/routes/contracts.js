@@ -17,12 +17,14 @@ function toIsoDate(value) {
 // POST /api/contracts — Tạo hợp đồng mới (landlord)
 // ─────────────────────────────────────────────────────────────
 router.post('/', authenticateToken, requireRole('landlord'), async (req, res) => {
-  const { roomID, tenantID, startDate, endDate, deposit, rentalPrice } = req.body;
+  const { roomID, tenantID, startDate, endDate, deposit, rentalPrice, electricity_price, water_price } = req.body;
 
   const parsedRoomID     = Number(roomID);
   const parsedTenantID   = Number(tenantID);
   const parsedDeposit    = Number(deposit);
   const parsedRentalPrice = Number(rentalPrice);
+  const parsedElectricityPrice = Number(electricity_price) || 0;
+  const parsedWaterPrice = Number(water_price) || 0;
 
   if (!Number.isInteger(parsedRoomID) || !Number.isInteger(parsedTenantID)) {
     return res.status(400).json({ status: 'error', message: 'Mã phòng và Mã người thuê là những trường bắt buộc.', errorCode: 'INVALID_PAYLOAD' });
@@ -74,9 +76,9 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
     await db.runAsync('BEGIN TRANSACTION');
 
     const insertResult = await db.runAsync(
-      `INSERT INTO lease_contracts (tenant_id, room_id, start_date, end_date, deposit, rental_price, status, is_expired)
-       VALUES (?, ?, ?, ?, ?, ?, 'active', 0)`,
-      [parsedTenantID, parsedRoomID, normalizedStartDate, normalizedEndDate, parsedDeposit, parsedRentalPrice]
+      `INSERT INTO lease_contracts (tenant_id, room_id, start_date, end_date, deposit, rental_price, electricity_price, water_price, status, is_expired)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 0)`,
+      [parsedTenantID, parsedRoomID, normalizedStartDate, normalizedEndDate, parsedDeposit, parsedRentalPrice, parsedElectricityPrice, parsedWaterPrice]
     );
 
     await db.runAsync(
@@ -97,6 +99,8 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
         endDate:     normalizedEndDate,
         deposit:     parsedDeposit,
         rentalPrice: parsedRentalPrice,
+        electricityPrice: parsedElectricityPrice,
+        waterPrice: parsedWaterPrice,
         isExpired:   false,
       },
     });
@@ -122,6 +126,8 @@ router.get('/', authenticateToken, requireRole('landlord'), async (req, res) => 
       lc.end_date       AS endDate,
       lc.deposit,
       lc.rental_price   AS rentalPrice,
+      lc.electricity_price AS electricityPrice,
+      lc.water_price    AS waterPrice,
       lc.status,
       lc.is_expired     AS isExpired,
       lc.created_at     AS createdAt,
@@ -169,6 +175,8 @@ router.get('/my-contract', authenticateToken, async (req, res) => {
         lc.end_date,
         lc.deposit,
         lc.rental_price,
+        lc.electricity_price,
+        lc.water_price,
         lc.status,
         lc.is_expired,
         lc.created_at,
@@ -216,6 +224,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
         lc.end_date       AS endDate,
         lc.deposit,
         lc.rental_price   AS rentalPrice,
+        lc.electricity_price AS electricityPrice,
+        lc.water_price    AS waterPrice,
         lc.status,
         lc.is_expired     AS isExpired,
         lc.created_at     AS createdAt,

@@ -102,7 +102,6 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;
-  margin-top: 8px;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -115,7 +114,7 @@ body {
 }
 
 .btn-secondary {
-  padding: 10px 20px;
+  padding: 8px 20px;
   background: white;
   color: #555;
   border: 1px solid #ddd;

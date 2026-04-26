@@ -278,28 +278,70 @@ router.put('/:id', authenticateToken, requireRole('landlord'), async (req, res) 
 });
 
 // US3: Delete a room
-router.delete('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
+router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
   const roomId = req.params.id;
 
-  db.get(
-    'SELECT * FROM rooms WHERE id = ? AND landlord_id = ?',
-    [roomId, req.user.id],
-    (err, room) => {
-      if (err) {
-        return res.status(500).json({ error: 'Không thể tìm phòng' });
-      }
-      if (!room) {
-        return res.status(404).json({ error: 'Phòng không tồn tại!' });
-      }
-
-      db.run('DELETE FROM rooms WHERE id = ? AND landlord_id = ?', [roomId, req.user.id], function (err) {
-        if (err) {
-          return res.status(500).json({ error: 'Xóa phòng thất bại!' });
-        }
-        res.json({ message: 'Xóa phòng thành công!' });
-      });
+  try {
+    // Verify room exists and belongs to landlord
+    const room = await db.getAsync(
+      'SELECT * FROM rooms WHERE id = ? AND landlord_id = ?',
+      [roomId, req.user.id]
+    );
+    
+    if (!room) {
+      return res.status(404).json({ error: 'Phòng không tồn tại!' });
     }
-  );
+
+    // Start transaction for cascade deletion
+    await db.runAsync('BEGIN TRANSACTION');
+
+    // Delete associated invoices first (cascade delete)
+    const invoices = await db.allAsync(
+      'SELECT id FROM invoices WHERE room_id = ?',
+      [roomId]
+    );
+
+    for (const invoice of invoices) {
+      // Delete meter readings associated with this invoice
+      await db.runAsync(
+        'DELETE FROM meter_readings WHERE invoice_id = ?',
+        [invoice.id]
+      );
+    }
+
+    // Delete all invoices for this room
+    await db.runAsync(
+      'DELETE FROM invoices WHERE room_id = ?',
+      [roomId]
+    );
+
+    // Delete meter readings not linked to invoices
+    await db.runAsync(
+      'DELETE FROM meter_readings WHERE room_id = ?',
+      [roomId]
+    );
+
+    // Delete the room itself
+    await db.runAsync(
+      'DELETE FROM rooms WHERE id = ? AND landlord_id = ?',
+      [roomId, req.user.id]
+    );
+
+    await db.runAsync('COMMIT');
+
+    const successMessage = invoices.length > 0 
+      ? `✅ Xóa phòng thành công! Đã xóa ${invoices.length} hóa đơn liên quan để giữ dữ liệu sạch sẽ.`
+      : '✅ Xóa phòng thành công!';
+
+    return res.json({ 
+      message: successMessage,
+      deletedInvoicesCount: invoices.length 
+    });
+  } catch (err) {
+    await db.runAsync('ROLLBACK').catch(() => {});
+    console.error('Delete room error:', err);
+    return res.status(500).json({ error: 'Xóa phòng thất bại!' });
+  }
 });
 
 module.exports = router;
