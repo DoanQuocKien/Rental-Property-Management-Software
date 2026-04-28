@@ -114,7 +114,7 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
     return res.status(400).json({ status: 'error', message: 'Invalid ID' });
   }
 
-  const { status, resolutionNote, staffId } = req.body;
+  const { status, resolutionNote, staffId, cost } = req.body;
   if (!status) {
     return res.status(400).json({ status: 'error', message: 'Trạng thái là trường bắt buộc.' });
   }
@@ -134,9 +134,10 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
        SET status = ?,
            resolution_note = COALESCE(?, resolution_note),
            staff_id = COALESCE(?, staff_id),
+           cost = COALESCE(?, cost),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [status, resolutionNote, staffId, reqId]
+      [status, resolutionNote, staffId, cost, reqId]
     );
 
     const updated = await db.getAsync(`SELECT id, status, resolution_note, staff_id, updated_at FROM maintenance_requests WHERE id = ?`, [reqId]);
@@ -154,7 +155,7 @@ router.put('/:id', authenticateToken, upload.single('issuePhoto'), async (req, r
     return res.status(400).json({ status: 'error', message: 'Mã yêu cầu không hợp lệ.' });
   }
 
-  const { description, category, priority, status, assignedTo, resolutionNote, staffId } = req.body;
+  const { description, category, priority, status, assignedTo, resolutionNote, staffId, cost } = req.body;
   const issuePhoto = req.file ? `/uploads/${req.file.filename}` : undefined;
 
   try {
@@ -190,10 +191,11 @@ router.put('/:id', authenticateToken, upload.single('issuePhoto'), async (req, r
              assigned_to = COALESCE(?, assigned_to),
              resolution_note = COALESCE(?, resolution_note),
              staff_id = COALESCE(?, staff_id),
+             cost = COALESCE(?, cost),
              issue_photo = COALESCE(?, issue_photo),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [description, category, priority, status, assignedTo, resolutionNote, staffId, issuePhoto !== undefined ? issuePhoto : existing.issue_photo, reqId]
+        [description, category, priority, status, assignedTo, resolutionNote, staffId, cost, issuePhoto !== undefined ? issuePhoto : existing.issue_photo, reqId]
       );
     }
 
