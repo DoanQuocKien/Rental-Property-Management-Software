@@ -9,6 +9,13 @@ function toMoneyNumber(value) {
   return Number.isFinite(amount) ? amount : NaN;
 }
 
+// Check if an invoice is a utility bill (contains electricity or water charges)
+function isUtilityBill(electricityAmount, waterAmount) {
+  const elec = toMoneyNumber(electricityAmount) || 0;
+  const water = toMoneyNumber(waterAmount) || 0;
+  return elec > 0 || water > 0;
+}
+
 // ──────────────────────────────────────────────────────────
 // GET /api/invoices  — Danh sách hóa đơn của landlord
 // Query: ?roomID=&month=&year=&status=
@@ -40,12 +47,13 @@ router.get('/', authenticateToken, requireRole('landlord'), async (req, res) => 
     return res.json({ status: 'success', data: invoices });
   } catch (err) {
     console.error('Get invoices error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch invoices.', errorCode: 'FETCH_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi tải danh sách hóa đơn.', errorCode: 'FETCH_FAILED' });
   }
 });
 
 // ──────────────────────────────────────────────────────────
 // POST /api/invoices  — Tạo hóa đơn mới (landlord)
+// Automatically syncs electricity/water unit prices from active contract
 // ──────────────────────────────────────────────────────────
 router.post('/', authenticateToken, requireRole('landlord'), async (req, res) => {
   const {
@@ -57,10 +65,10 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   const parsedTotal  = Number(totalAmount);
 
   if (!Number.isInteger(parsedRoomID)) {
-    return res.status(400).json({ status: 'error', message: 'roomID is required and must be an integer.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã phòng là bắt buộc và phải là số nguyên.', errorCode: 'INVALID_PAYLOAD' });
   }
   if (!Number.isFinite(parsedTotal) || parsedTotal < 0) {
-    return res.status(400).json({ status: 'error', message: 'totalAmount is required and must be a positive number.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Tổng tiền là bắt buộc và phải là số dương.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   const invoiceMonth = Number.isInteger(Number(month)) ? Number(month) : new Date().getMonth() + 1;
@@ -70,7 +78,51 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   try {
     const room = await db.getAsync('SELECT id FROM rooms WHERE id = ? AND landlord_id = ?', [parsedRoomID, req.user.id]);
     if (!room) {
-      return res.status(404).json({ status: 'error', message: 'Room not found or you do not have permission.', errorCode: 'ROOM_NOT_FOUND' });
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy phòng hoặc bạn không có quyền.', errorCode: 'ROOM_NOT_FOUND' });
+    }
+
+    // Fetch contract pricing if contractID is provided
+    let syncedElectricityAmount = Number(electricityAmount) || 0;
+    let syncedWaterAmount = Number(waterAmount) || 0;
+    let pricingSyncMessage = '';
+
+    if (contractID) {
+      const contract = await db.getAsync(
+        `SELECT lc.electricity_price, lc.water_price 
+         FROM lease_contracts lc
+         JOIN rooms r ON lc.room_id = r.id
+         WHERE lc.id = ? AND r.landlord_id = ? AND lc.status = 'active'`,
+        [Number(contractID), req.user.id]
+      );
+
+      if (contract) {
+        // If electricity/water amounts not provided, they will be calculated based on readings
+        // If provided, we sync the rates but amounts depend on actual consumption
+        if (contract.electricity_price > 0) {
+          pricingSyncMessage = '✅ Giá điện được cập nhật từ hợp đồng. ';
+        }
+        if (contract.water_price > 0) {
+          pricingSyncMessage += '✅ Giá nước được cập nhật từ hợp đồng.';
+        }
+      }
+    }
+
+    // Check if this is a utility bill and validate uniqueness constraint
+    if (isUtilityBill(syncedElectricityAmount || electricityAmount, syncedWaterAmount || waterAmount)) {
+      const existingUtilityBill = await db.getAsync(
+        `SELECT id FROM invoices 
+         WHERE room_id = ? AND month = ? AND year = ? 
+         AND (electricity_amount > 0 OR water_amount > 0)`,
+        [parsedRoomID, invoiceMonth, invoiceYear]
+      );
+      
+      if (existingUtilityBill) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Hóa đơn tiện ích (điện/nước) đã tồn tại cho phòng ${parsedRoomID} trong tháng ${invoiceMonth}/${invoiceYear}.`,
+          errorCode: 'DUPLICATE_UTILITY_BILL'
+        });
+      }
     }
 
     await db.runAsync('BEGIN TRANSACTION');
@@ -85,8 +137,8 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
         readingID  ? Number(readingID)  : null,
         invoiceMonth, invoiceYear,
         Number(rentAmount)        || 0,
-        Number(electricityAmount) || 0,
-        Number(waterAmount)       || 0,
+        syncedElectricityAmount || Number(electricityAmount) || 0,
+        syncedWaterAmount || Number(waterAmount) || 0,
         Number(serviceAmount)     || 0,
         parsedTotal,
         dDate
@@ -101,7 +153,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 
     return res.status(201).json({
       status: 'success',
-      message: 'Invoice created successfully.',
+      message: pricingSyncMessage ? `Tạo hóa đơn thành công. ${pricingSyncMessage}` : 'Tạo hóa đơn thành công.',
       data: {
         id: result.lastID, roomID: parsedRoomID,
         contractID: contractID ? Number(contractID) : null,
@@ -112,7 +164,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   } catch (error) {
     await db.runAsync('ROLLBACK').catch(() => {});
     console.error('Invoice creation error:', error);
-    return res.status(500).json({ status: 'error', message: 'Failed to create invoice.', errorCode: 'INVOICE_CREATE_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Không thể tạo hóa đơn.', errorCode: 'INVOICE_CREATE_FAILED' });
   }
 });
 
@@ -122,7 +174,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 router.get('/:id', authenticateToken, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({ status: 'error', message: 'Invalid invoice ID.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã hóa đơn không hợp lệ.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   try {
@@ -132,20 +184,20 @@ router.get('/:id', authenticateToken, async (req, res) => {
        WHERE i.id = ?`,
       [id]
     );
-    if (!inv) return res.status(404).json({ status: 'error', message: 'Invoice not found.', errorCode: 'NOT_FOUND' });
+    if (!inv) return res.status(404).json({ status: 'error', message: 'Không tìm thấy hóa đơn.', errorCode: 'NOT_FOUND' });
 
     // Landlord sees own rooms; tenant sees via contract
     const isLandlord = req.user.role === 'landlord' && inv.landlord_id === req.user.id;
     const isTenant   = req.user.role === 'tenant'; // further check can be done
 
     if (!isLandlord && !isTenant) {
-      return res.status(403).json({ status: 'error', message: 'Access denied.', errorCode: 'FORBIDDEN' });
+      return res.status(403).json({ status: 'error', message: 'Truy cập bị từ chối.', errorCode: 'FORBIDDEN' });
     }
 
     return res.json({ status: 'success', data: inv });
   } catch (err) {
     console.error('Get invoice detail error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch invoice.', errorCode: 'FETCH_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi tải hóa đơn.', errorCode: 'FETCH_FAILED' });
   }
 });
 
@@ -155,12 +207,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.put('/:id/pay', authenticateToken, requireRole('landlord'), async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({ status: 'error', message: 'Invalid invoice ID.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã hóa đơn không hợp lệ.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   const { payment_method } = req.body;
   if (!payment_method) {
-    return res.status(400).json({ status: 'error', message: 'payment_method is required.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Phương thức thanh toán là trường bắt buộc.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   try {
@@ -173,10 +225,10 @@ router.put('/:id/pay', authenticateToken, requireRole('landlord'), async (req, r
     );
 
     if (!inv || inv.landlord_id !== req.user.id) {
-      return res.status(404).json({ status: 'error', message: 'Invoice not found.', errorCode: 'NOT_FOUND' });
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy hóa đơn.', errorCode: 'NOT_FOUND' });
     }
     if (inv.status === 'paid') {
-      return res.status(400).json({ status: 'error', message: 'Invoice is already paid.', errorCode: 'ALREADY_PAID' });
+      return res.status(400).json({ status: 'error', message: 'Hóa đơn này đã thanh toán.', errorCode: 'ALREADY_PAID' });
     }
 
     await db.runAsync(
@@ -188,10 +240,10 @@ router.put('/:id/pay', authenticateToken, requireRole('landlord'), async (req, r
       [payment_method, id]
     );
 
-    return res.json({ status: 'success', message: 'Invoice marked as paid successfully.' });
+    return res.json({ status: 'success', message: 'Hóa đơn đã được đánh dấu là thanh toán.' });
   } catch (err) {
     console.error('Pay invoice error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to update invoice.', errorCode: 'UPDATE_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Không thể cập nhật hóa đơn', errorCode: 'UPDATE_FAILED' });
   }
 });
 
@@ -201,7 +253,7 @@ router.put('/:id/pay', authenticateToken, requireRole('landlord'), async (req, r
 router.get('/mock-payment/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({ status: 'error', message: 'Invalid invoice ID.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã hóa đơn không hợp lệ.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   try {
@@ -213,7 +265,7 @@ router.get('/mock-payment/:id', async (req, res) => {
     );
 
     if (!invoice) {
-      return res.status(404).json({ status: 'error', message: 'Invoice not found.', errorCode: 'NOT_FOUND' });
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy hóa đơn.', errorCode: 'NOT_FOUND' });
     }
 
     const totalAmount = toMoneyNumber(invoice.total_amount);
@@ -230,7 +282,7 @@ router.get('/mock-payment/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('Get mock payment invoice error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch invoice.', errorCode: 'FETCH_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi tải hóa đơn.', errorCode: 'FETCH_FAILED' });
   }
 });
 
@@ -243,10 +295,10 @@ router.post('/mock-payment/confirm', async (req, res) => {
   const amount = toMoneyNumber(req.body?.amount);
 
   if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
-    return res.status(400).json({ status: 'error', message: 'invoiceId must be a positive integer.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Mã hóa đơn phải là số nguyên dương.', errorCode: 'INVALID_PAYLOAD' });
   }
   if (!Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ status: 'error', message: 'amount must be a positive number.', errorCode: 'INVALID_PAYLOAD' });
+    return res.status(400).json({ status: 'error', message: 'Số tiền phải là số dương.', errorCode: 'INVALID_PAYLOAD' });
   }
 
   try {
@@ -258,14 +310,14 @@ router.post('/mock-payment/confirm', async (req, res) => {
     );
 
     if (!invoice) {
-      return res.status(404).json({ status: 'error', message: 'Invoice not found.', errorCode: 'NOT_FOUND' });
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy hóa đơn.', errorCode: 'NOT_FOUND' });
     }
 
     const totalAmount = toMoneyNumber(invoice.total_amount);
     const currentPaidAmount = toMoneyNumber(invoice.paid_amount || 0);
 
     if (invoice.status === 'paid' || currentPaidAmount >= totalAmount) {
-      return res.status(400).json({ status: 'error', message: 'Invoice is already paid.', errorCode: 'ALREADY_PAID' });
+      return res.status(400).json({ status: 'error', message: 'Hóa đơn đã được thanh toán.', errorCode: 'ALREADY_PAID' });
     }
 
     const newPaidAmount = currentPaidAmount + amount;
@@ -287,7 +339,7 @@ router.post('/mock-payment/confirm', async (req, res) => {
 
     return res.json({
       status: 'success',
-      message: isPaidInFull ? 'Invoice paid successfully.' : 'Partial payment recorded successfully.',
+      message: isPaidInFull ? 'Hóa đơn đã được thanh toán.' : 'Ghi nhận thanh toán một phần thành công.',
       data: {
         invoiceId,
         paidAmount: newPaidAmount,
@@ -297,7 +349,7 @@ router.post('/mock-payment/confirm', async (req, res) => {
     });
   } catch (err) {
     console.error('Mock payment confirm error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to process mock payment.', errorCode: 'UPDATE_FAILED' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi xử lý thanh toán giả lập.', errorCode: 'UPDATE_FAILED' });
   }
 });
 
@@ -307,7 +359,7 @@ router.post('/mock-payment/confirm', async (req, res) => {
 router.patch('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({ status: 'error', message: 'Invalid invoice ID.' });
+    return res.status(400).json({ status: 'error', message: 'Mã hóa đơn không hợp lệ.' });
   }
 
   const { status, payment_status, payment_method, paid_at } = req.body;
@@ -317,7 +369,7 @@ router.patch('/:id', authenticateToken, requireRole('landlord'), async (req, res
       `SELECT i.id FROM invoices i JOIN rooms r ON i.room_id = r.id WHERE i.id = ? AND r.landlord_id = ?`,
       [id, req.user.id]
     );
-    if (!inv) return res.status(404).json({ status: 'error', message: 'Invoice not found.' });
+    if (!inv) return res.status(404).json({ status: 'error', message: 'Không tìm thấy hóa đơn.' });
 
     await db.runAsync(
       `UPDATE invoices
@@ -330,10 +382,76 @@ router.patch('/:id', authenticateToken, requireRole('landlord'), async (req, res
       [status, payment_status, payment_method, paid_at || null, id]
     );
 
-    return res.json({ status: 'success', message: 'Invoice updated.' });
+    return res.json({ status: 'success', message: 'Hóa đơn đã được cập nhật.' });
   } catch (err) {
     console.error('Patch invoice error:', err);
-    return res.status(500).json({ status: 'error', message: 'Failed to update invoice.' });
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi cập nhật hóa đơn.' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// DELETE /api/invoices/:id  — Xóa hóa đơn (landlord)
+// ──────────────────────────────────────────────────────────
+router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ status: 'error', message: 'Mã hóa đơn không hợp lệ.', errorCode: 'INVALID_PAYLOAD' });
+  }
+
+  try {
+    // Verify invoice belongs to landlord's room and get invoice details
+    const inv = await db.getAsync(
+      `SELECT i.id, i.status, i.reading_id, i.month, i.year, i.room_id, r.landlord_id
+       FROM invoices i 
+       JOIN rooms r ON i.room_id = r.id 
+       WHERE i.id = ? AND r.landlord_id = ?`,
+      [id, req.user.id]
+    );
+
+    if (!inv) {
+      return res.status(404).json({ status: 'error', message: 'Không tìm thấy hóa đơn.', errorCode: 'NOT_FOUND' });
+    }
+
+    // Prevent deletion of paid invoices
+    if (inv.status === 'paid') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Không thể xóa hóa đơn đã thanh toán.',
+        errorCode: 'CANNOT_DELETE_PAID_INVOICE'
+      });
+    }
+
+    await db.runAsync('BEGIN TRANSACTION');
+
+    try {
+      // Delete all meter readings for this room/month/year (cascade delete)
+      // Calculate the date range for the month
+      const monthStart = `${inv.year}-${String(inv.month).padStart(2, '0')}-01`;
+      const monthEnd = new Date(inv.year, inv.month, 0).toISOString().slice(0, 10);
+      
+      await db.runAsync(
+        `DELETE FROM meter_readings 
+         WHERE room_id = ? AND recorded_date >= ? AND recorded_date <= ?`,
+        [inv.room_id, monthStart, monthEnd]
+      );
+
+      // Delete the invoice
+      await db.runAsync('DELETE FROM invoices WHERE id = ?', [id]);
+
+      await db.runAsync('COMMIT');
+
+      return res.json({
+        status: 'success',
+        message: 'Xóa hóa đơn và chỉ số thành công.'
+      });
+    } catch (txnErr) {
+      await db.runAsync('ROLLBACK').catch(() => {});
+      throw txnErr;
+    }
+  } catch (err) {
+    await db.runAsync('ROLLBACK').catch(() => {});
+    console.error('Delete invoice error:', err);
+    return res.status(500).json({ status: 'error', message: 'Lỗi khi xóa hóa đơn.', errorCode: 'DELETE_FAILED' });
   }
 });
 

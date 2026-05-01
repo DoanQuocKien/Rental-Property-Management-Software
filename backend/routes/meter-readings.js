@@ -11,7 +11,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   if (!Number.isInteger(parsedRoomID)) {
     return res.status(400).json({
       status: 'error',
-      message: 'roomID is required and must be an integer.',
+      message: 'Mã phòng là trường bắt buộc và phải là một số nguyên dương.',
       errorCode: 'INVALID_PAYLOAD'
     });
   }
@@ -23,7 +23,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
   if (!Number.isFinite(eIndex) || eIndex < 0 || !Number.isFinite(wIndex) || wIndex < 0) {
     return res.status(400).json({
       status: 'error',
-      message: 'electricityIndex and waterIndex must be positive numbers.',
+      message: 'Chỉ số điện và chỉ số nước phải là các số dương.',
       errorCode: 'INVALID_PAYLOAD'
     });
   }
@@ -39,7 +39,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
     if (!room) {
       return res.status(404).json({
         status: 'error',
-        message: 'Room not found or you do not have permission to access it.',
+        message: 'Phòng không tồn tại hoặc bạn không có quyền truy cập vào nó.',
         errorCode: 'ROOM_NOT_FOUND'
       });
     }
@@ -49,13 +49,15 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
       [parsedRoomID]
     );
 
+    const isFirstReading = !prevReading;
     const prevElectricity = prevReading ? prevReading.electricity_index : 0;
     const prevWater = prevReading ? prevReading.water_index : 0;
 
-    if (eIndex < prevElectricity || wIndex < prevWater) {
+    // For non-first readings, validate that indexes don't decrease
+    if (!isFirstReading && (eIndex < prevElectricity || wIndex < prevWater)) {
       return res.status(400).json({
         status: 'error',
-        message: 'New indexes cannot be smaller than previous indexes.',
+        message: 'Chỉ số tháng mới không thể nhỏ hơn chỉ số tháng trước đó.',
         errorCode: 'INVALID_INDEX_VALUES'
       });
     }
@@ -69,7 +71,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 
     return res.status(201).json({
       status: 'success',
-      message: 'Meter reading recorded successfully.',
+      message: 'Chỉ số điện nước đã được ghi thành công.',
       data: {
         id: result.lastID,
         roomID: parsedRoomID,
@@ -82,10 +84,10 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
     });
 
   } catch (error) {
-    console.error('Meter reading creation error:', error);
+    console.error('Lỗi tạo chỉ số điện nước:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to record meter reading.',
+      message: 'Không thể ghi chỉ số điện nước. Vui lòng thử lại sau.',
       errorCode: 'METER_READING_CREATE_FAILED'
     });
   }

@@ -13,7 +13,7 @@ const landlordRoutes = require('./routes/landlord');
 const meterReadingRoutes = require('./routes/meter-readings');
 const invoiceRoutes = require('./routes/invoices');
 const maintenanceRoutes = require('./routes/maintenance-requests');
-const notificationsRoutes = require('./routes/notifications');
+const notificationRoutes = require('./routes/notifications');
 const path = require('path');
 
 const app       = express();
@@ -72,7 +72,7 @@ app.use('/api/landlord', apiLimiter, landlordRoutes);
 app.use('/api/meter-readings', apiLimiter, meterReadingRoutes);
 app.use('/api/invoices', apiLimiter, invoiceRoutes);
 app.use('/api/maintenance-requests', apiLimiter, maintenanceRoutes);
-app.use('/api/notifications', apiLimiter, notificationsRoutes);
+app.use('/api/notifications', apiLimiter, notificationRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────
 app.use((req, res) => {

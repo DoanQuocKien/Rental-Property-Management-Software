@@ -47,7 +47,7 @@ router.get('/tenants', authenticateToken, requireRole('landlord'), async (req, r
     console.error('Get landlord tenants error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch tenants.',
+      message: 'Có lỗi khi lấy danh sách khách thuê. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -99,7 +99,7 @@ router.get('/tenants/all', authenticateToken, requireRole('landlord'), async (re
     console.error('Get all tenants error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch tenants.',
+      message: 'Có lỗi khi lấy danh sách khách thuê. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -112,7 +112,7 @@ router.get('/tenants/:id', authenticateToken, requireRole('landlord'), async (re
   if (!Number.isInteger(tenantId) || tenantId <= 0) {
     return res.status(400).json({
       status: 'error',
-      message: 'Invalid tenant ID.',
+      message: 'Mã người thuê không hợp lệ.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -137,7 +137,7 @@ router.get('/tenants/:id', authenticateToken, requireRole('landlord'), async (re
     if (!tenant) {
       return res.status(404).json({
         status: 'error',
-        message: 'Tenant not found.',
+        message: 'Người thuê không tồn tại.',
         errorCode: 'TENANT_NOT_FOUND',
       });
     }
@@ -168,7 +168,7 @@ router.get('/tenants/:id', authenticateToken, requireRole('landlord'), async (re
     console.error('Get tenant detail error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch tenant.',
+      message: 'Có lỗi khi lấy thông tin người thuê. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -218,7 +218,7 @@ router.get('/maintenance', authenticateToken, requireRole('landlord'), async (re
     console.error('Get maintenance requests error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch maintenance requests.',
+      message: 'Có lỗi khi lấy yêu cầu bảo trì. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -234,7 +234,7 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
   if (!Number.isInteger(requestId) || requestId <= 0) {
     return res.status(400).json({
       status: 'error',
-      message: 'Invalid request ID.',
+      message: 'Mã yêu cầu không hợp lệ.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -242,7 +242,7 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
   if (!status || !VALID_STATUSES.includes(status)) {
     return res.status(400).json({
       status: 'error',
-      message: `Status must be one of: ${VALID_STATUSES.join(', ')}`,
+      message: `Trạng thái phải là một trong các giá trị: ${VALID_STATUSES.join(', ')}`,
       errorCode: 'INVALID_STATUS',
     });
   }
@@ -259,7 +259,7 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
     if (!request) {
       return res.status(404).json({
         status: 'error',
-        message: 'Maintenance request not found.',
+        message: 'Không tìm thấy yêu cầu bảo trì.',
         errorCode: 'REQUEST_NOT_FOUND',
       });
     }
@@ -273,13 +273,13 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
 
     return res.json({
       status: 'success',
-      message: 'Maintenance request updated successfully.',
+      message: 'Yêu cầu bảo trì đã được cập nhật thành công.',
     });
   } catch (err) {
     console.error('Update maintenance error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to update maintenance request.',
+      message: 'Có lỗi khi cập nhật yêu cầu bảo trì. Vui lòng thử lại sau.',
       errorCode: 'UPDATE_FAILED',
     });
   }
@@ -304,7 +304,7 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
   ) {
     return res.status(400).json({
       status: 'error',
-      message: 'roomID must be a positive integer, month must be between 1 and 12, and year must be between 2000 and 9999.',
+      message: 'Mã phòng phải là số nguyên dương, tháng phải từ 1 đến 12, và năm phải từ 2000 đến 9999.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -315,7 +315,7 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
     if (!room) {
       return res.status(404).json({
         status: 'error',
-        message: 'Room not found.',
+        message: 'Không tìm thấy phòng.',
         errorCode: 'ROOM_NOT_FOUND',
       });
     }
@@ -332,7 +332,7 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
     console.error('Get previous meter reading error:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to get previous meter reading. Please check room and meter reading data.',
+      message: 'Không thể lấy chỉ số trước đó. Vui lòng kiểm tra phòng và chỉ số máy đo.',
       errorCode: 'PREVIOUS_READING_FAILED',
     });
   }
@@ -361,7 +361,7 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
   if (!Number.isInteger(parsedRoomID) || parsedRoomID <= 0) {
     return res.status(400).json({
       status: 'error',
-      message: 'roomID is required.',
+      message: 'Mã phòng không hợp lệ.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -369,7 +369,7 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
   if (!Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12 || !Number.isInteger(parsedYear)) {
     return res.status(400).json({
       status: 'error',
-      message: 'month and year are required.',
+      message: 'Tháng và Năm phải là số nguyên hợp lệ (tháng 1-12, năm 2000-9999).',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -380,7 +380,7 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
     if (!room) {
       return res.status(404).json({
         status: 'error',
-        message: 'Room not found.',
+        message: 'Không tìm thấy phòng.',
         errorCode: 'ROOM_NOT_FOUND',
       });
     }
@@ -436,137 +436,8 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
     console.error('Invoice calculation error:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Invoice calculation failed. Please verify service pricing configuration.',
+      message: 'Thanh toán thất bại. Vui lòng kiểm tra cấu hình giá dịch vụ.',
       errorCode: 'INVOICE_CALCULATION_FAILED',
-    });
-  }
-});
-
-// GET /api/landlord/statistics/revenue
-// Lấy tổng doanh thu theo tháng/năm
-router.get('/statistics/revenue', authenticateToken, requireRole('landlord'), async (req, res) => {
-  try {
-    const revenueData = await db.allAsync(
-      `SELECT
-        i.month,
-        i.year,
-        SUM(i.total_amount) as totalRevenue
-       FROM invoices i
-       JOIN rooms r ON i.room_id = r.id
-       WHERE r.landlord_id = ? AND (LOWER(i.status) = 'paid' OR LOWER(i.payment_status) = 'paid')
-       GROUP BY i.year, i.month
-       ORDER BY i.year DESC, i.month DESC`,
-      [req.user.id]
-    );
-
-    return res.json({
-      status: 'success',
-      data: revenueData,
-    });
-  } catch (err) {
-    console.error('Get revenue statistics error:', err);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch revenue statistics.',
-      errorCode: 'FETCH_FAILED',
-    });
-  }
-});
-
-// GET /api/landlord/statistics/repair-costs
-// Lấy tổng chi phí sửa chữa theo tháng/năm
-router.get('/statistics/repair-costs', authenticateToken, requireRole('landlord'), async (req, res) => {
-  try {
-    const costData = await db.allAsync(
-      `SELECT
-        CAST(strftime('%m', mr.updated_at) AS INTEGER) as month,
-        CAST(strftime('%Y', mr.updated_at) AS INTEGER) as year,
-        SUM(mr.cost) as totalCost
-       FROM maintenance_requests mr
-       JOIN rooms r ON mr.room_id = r.id
-       WHERE r.landlord_id = ? AND LOWER(mr.status) = 'completed' AND mr.cost > 0
-       GROUP BY year, month
-       ORDER BY year DESC, month DESC`,
-      [req.user.id]
-    );
-
-    return res.json({
-      status: 'success',
-      data: costData,
-    });
-  } catch (err) {
-    console.error('Get repair costs statistics error:', err);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch repair costs statistics.',
-      errorCode: 'FETCH_FAILED',
-    });
-  }
-});
-
-// GET /api/landlord/statistics/debt-tenants
-// Lọc ra danh sách các khách thuê đang nợ tiền
-router.get('/statistics/debt-tenants', authenticateToken, requireRole('landlord'), async (req, res) => {
-  try {
-    const debtInvoices = await db.allAsync(
-      `SELECT
-        u.id as tenantId,
-        COALESCE(u.full_name, u.name) as fullName,
-        u.email,
-        u.phone_number as phoneNumber,
-        r.name as roomName,
-        r.id as roomId,
-        i.id as invoiceId,
-        i.month,
-        i.year,
-        i.total_amount as amountOwed,
-        i.due_date as dueDate
-       FROM invoices i
-       JOIN rooms r ON i.room_id = r.id
-       /* Sometimes invoices.contract_id is null? It should be linked to contract or room. Let's join contract via invoice or room. 
-          Assuming invoices are linked to the tenant via lease_contracts or direct tenant link isn't strictly there, but contract_id is: */
-       JOIN lease_contracts lc ON i.contract_id = lc.id
-       JOIN users u ON lc.tenant_id = u.id
-       WHERE r.landlord_id = ? AND (LOWER(i.status) = 'unpaid' OR LOWER(i.payment_status) = 'unpaid')
-       ORDER BY i.due_date ASC`,
-      [req.user.id]
-    );
-
-    // Grouping by tenant
-    const tenantsMap = {};
-    debtInvoices.forEach(row => {
-      if (!tenantsMap[row.tenantId]) {
-        tenantsMap[row.tenantId] = {
-          tenantId: row.tenantId,
-          fullName: row.fullName,
-          email: row.email,
-          phoneNumber: row.phoneNumber,
-          totalDebt: 0,
-          invoices: []
-        };
-      }
-      tenantsMap[row.tenantId].invoices.push({
-        invoiceId: row.invoiceId,
-        roomId: row.roomId,
-        roomName: row.roomName,
-        month: row.month,
-        year: row.year,
-        amountOwed: row.amountOwed,
-        dueDate: row.dueDate
-      });
-      tenantsMap[row.tenantId].totalDebt += row.amountOwed;
-    });
-
-    return res.json({
-      status: 'success',
-      data: Object.values(tenantsMap),
-    });
-  } catch (err) {
-    console.error('Get debt tenants statistics error:', err);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch debt tenants statistics.',
-      errorCode: 'FETCH_FAILED',
     });
   }
 });
