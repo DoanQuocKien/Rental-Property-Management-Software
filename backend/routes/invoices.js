@@ -391,6 +391,7 @@ router.patch('/:id', authenticateToken, requireRole('landlord'), async (req, res
 
 // ──────────────────────────────────────────────────────────
 // DELETE /api/invoices/:id  — Xóa hóa đơn (landlord)
+// Resets electricity and water usage metrics to zero
 // ──────────────────────────────────────────────────────────
 router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
   const id = Number(req.params.id);
@@ -424,13 +425,14 @@ router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, re
     await db.runAsync('BEGIN TRANSACTION');
 
     try {
-      // Delete all meter readings for this room/month/year (cascade delete)
-      // Calculate the date range for the month
+      // Reset meter readings for this room/month/year to zero
+      // (keep the records but clear electricity and water indices)
       const monthStart = `${inv.year}-${String(inv.month).padStart(2, '0')}-01`;
       const monthEnd = new Date(inv.year, inv.month, 0).toISOString().slice(0, 10);
       
       await db.runAsync(
-        `DELETE FROM meter_readings 
+        `UPDATE meter_readings 
+         SET electricity_index = 0, water_index = 0, invoice_id = NULL
          WHERE room_id = ? AND recorded_date >= ? AND recorded_date <= ?`,
         [inv.room_id, monthStart, monthEnd]
       );
@@ -442,7 +444,7 @@ router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, re
 
       return res.json({
         status: 'success',
-        message: 'Xóa hóa đơn và chỉ số thành công.'
+        message: 'Xóa hóa đơn và đặt lại chỉ số thành công.'
       });
     } catch (txnErr) {
       await db.runAsync('ROLLBACK').catch(() => {});
