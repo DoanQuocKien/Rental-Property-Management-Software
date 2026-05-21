@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api'; // Thêm import api để tab Cấu hình dịch vụ gọi Backend
 
 const inputStyle = (disabled = false) => ({
   width: '100%',
@@ -24,7 +25,7 @@ function AccountTab({ form, onChange }) {
     setSaving(true);
     await new Promise((r) => setTimeout(r, 800));
     setSaving(false);
-    setSuccess('Đã lưu thông tin thành công!');
+    setSuccess('Đã lưu thông tin tài khoản thành công!');
     setTimeout(() => setSuccess(''), 3000);
   };
 
@@ -360,6 +361,119 @@ function SecurityTab({ form, onChange }) {
   );
 }
 
+// ── Service Tab (TAB MỚI CHO SPRINT 5) ────────────────────────────────────────
+function ServiceTab({ form, onChange, onBulkUpdate }) {
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Gọi API để lấy cấu hình giá hiện tại khi mở tab
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('/landlord/settings');
+        if (res.data?.data) {
+          onBulkUpdate('service', res.data.data);
+        }
+      } catch (err) {
+        console.error('Không tải được cấu hình dịch vụ', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, [onBulkUpdate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      await api.put('/landlord/settings', form);
+      setSuccess('Đã lưu cấu hình dịch vụ thành công!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Lỗi khi lưu cấu hình. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field = (key) => ({
+    value: form[key] || '',
+    onChange: (e) => onChange('service', key, e.target.value),
+  });
+
+  if (loading) return <div style={{ padding: '20px', color: '#888' }}>Đang tải cấu hình dịch vụ...</div>;
+
+  return (
+    <div>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#333', marginBottom: '20px' }}>
+        Cấu hình Dịch vụ & Bảng giá
+      </h3>
+
+      {success && (
+        <div style={{ background: '#e6fffa', border: '1px solid #81e6d9', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#276749', fontSize: '0.9rem' }}>
+          ✅ {success}
+        </div>
+      )}
+      {error && (
+        <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#742a2a', fontSize: '0.9rem' }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', marginBottom: '24px' }}>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Dịch vụ bắt buộc
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Giá Điện (VNĐ / kWh) *</label>
+              <input type="number" required placeholder="VD: 3500" {...field('electricity_price')} style={inputStyle()} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Giá Nước (VNĐ / Khối) *</label>
+              <input type="number" required placeholder="VD: 20000" {...field('water_price')} style={inputStyle()} />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', marginBottom: '24px' }}>
+          <div style={{ fontWeight: '600', color: '#667eea', fontSize: '0.85rem', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Dịch vụ phụ trợ
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Wifi (VNĐ / Phòng)</label>
+              <input type="number" placeholder="VD: 100000" {...field('wifi_price')} style={inputStyle()} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Rác (VNĐ / Phòng)</label>
+              <input type="number" placeholder="VD: 30000" {...field('garbage_price')} style={inputStyle()} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', color: '#555', marginBottom: '6px', fontSize: '0.85rem' }}>Phí Giữ Xe (VNĐ / Xe)</label>
+              <input type="number" placeholder="VD: 120000" {...field('parking_price')} style={inputStyle()} />
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+        >
+          {saving ? 'Đang lưu...' : '💾 Lưu cấu hình dịch vụ'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 // ── Main Settings ─────────────────────────────────────────────────────────────
 export default function Settings() {
   const { user } = useAuth();
@@ -390,16 +504,32 @@ export default function Settings() {
     loginNotif: true,
   });
 
-  // Generic updater: onChange('account' | 'property' | 'security', key, value)
+  // State mới cho tab Cấu hình dịch vụ (Sprint 5)
+  const [serviceForm, setServiceForm] = useState({
+    electricity_price: '',
+    water_price: '',
+    wifi_price: '',
+    garbage_price: '',
+    parking_price: ''
+  });
+
+  // Generic updater: onChange('account' | 'property' | 'security' | 'service', key, value)
   const handleChange = (section, key, value) => {
     if (section === 'account') setAccountForm((f) => ({ ...f, [key]: value }));
     else if (section === 'property') setPropertyForm((f) => ({ ...f, [key]: value }));
     else if (section === 'security') setSecurityForm((f) => ({ ...f, [key]: value }));
+    else if (section === 'service') setServiceForm((f) => ({ ...f, [key]: value }));
+  };
+
+  // Hàm update toàn bộ data (dùng khi load API lần đầu)
+  const handleBulkUpdate = (section, data) => {
+    if (section === 'service') setServiceForm(data);
   };
 
   const tabs = [
     { id: 'account', icon: '👤', label: 'Tài khoản' },
     { id: 'property', icon: '🏠', label: 'Thông tin khu trọ' },
+    { id: 'service', icon: '⚡', label: 'Cấu hình Dịch vụ' }, // Tab mới được thêm vào đây
     { id: 'security', icon: '🔒', label: 'Bảo mật' },
   ];
 
@@ -444,6 +574,9 @@ export default function Settings() {
         </div>
         <div style={{ display: activeTab === 'property' ? 'block' : 'none' }}>
           <PropertyTab form={propertyForm} onChange={handleChange} />
+        </div>
+        <div style={{ display: activeTab === 'service' ? 'block' : 'none' }}>
+          <ServiceTab form={serviceForm} onChange={handleChange} onBulkUpdate={handleBulkUpdate} />
         </div>
         <div style={{ display: activeTab === 'security' ? 'block' : 'none' }}>
           <SecurityTab form={securityForm} onChange={handleChange} />

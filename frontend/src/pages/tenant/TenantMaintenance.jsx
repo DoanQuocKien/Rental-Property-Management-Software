@@ -49,11 +49,21 @@ export default function TenantMaintenance() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      // 🛡️ LỚP GIÁP BẢO VỆ FRONT-END: Chặn ảnh lớn hơn 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        alert('⚠️ Kích thước ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB');
+        e.target.value = null; // Reset lại ô input để khách chọn lại ảnh khác
+        return;
+      }
+
+      // Nếu ảnh < 5MB thì tiến hành đọc và chuyển sang chuỗi Base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm({ ...form, issuePhoto: reader.result });
+      };
+      reader.readAsDataURL(file);
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.description.trim()) {
