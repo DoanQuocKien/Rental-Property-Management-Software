@@ -9,6 +9,8 @@ frontend/dist-ssr/
 
 # SQLite databases
 backend/*.db
+backend/*.db-shm
+backend/*.db-wal
 backend/__tests__/*.db
 
 # Logs

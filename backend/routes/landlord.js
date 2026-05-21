@@ -47,7 +47,7 @@ router.get('/tenants', authenticateToken, requireRole('landlord'), async (req, r
     console.error('Get landlord tenants error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch tenants.',
+      message: 'Có lỗi khi lấy danh sách khách thuê. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -99,7 +99,7 @@ router.get('/tenants/all', authenticateToken, requireRole('landlord'), async (re
     console.error('Get all tenants error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch tenants.',
+      message: 'Có lỗi khi lấy danh sách khách thuê. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -112,7 +112,7 @@ router.get('/tenants/:id', authenticateToken, requireRole('landlord'), async (re
   if (!Number.isInteger(tenantId) || tenantId <= 0) {
     return res.status(400).json({
       status: 'error',
-      message: 'Invalid tenant ID.',
+      message: 'Mã người thuê không hợp lệ.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -137,7 +137,7 @@ router.get('/tenants/:id', authenticateToken, requireRole('landlord'), async (re
     if (!tenant) {
       return res.status(404).json({
         status: 'error',
-        message: 'Tenant not found.',
+        message: 'Người thuê không tồn tại.',
         errorCode: 'TENANT_NOT_FOUND',
       });
     }
@@ -168,7 +168,7 @@ router.get('/tenants/:id', authenticateToken, requireRole('landlord'), async (re
     console.error('Get tenant detail error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch tenant.',
+      message: 'Có lỗi khi lấy thông tin người thuê. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -218,7 +218,7 @@ router.get('/maintenance', authenticateToken, requireRole('landlord'), async (re
     console.error('Get maintenance requests error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch maintenance requests.',
+      message: 'Có lỗi khi lấy yêu cầu bảo trì. Vui lòng thử lại sau.',
       errorCode: 'FETCH_FAILED',
     });
   }
@@ -234,7 +234,7 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
   if (!Number.isInteger(requestId) || requestId <= 0) {
     return res.status(400).json({
       status: 'error',
-      message: 'Invalid request ID.',
+      message: 'Mã yêu cầu không hợp lệ.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -242,7 +242,7 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
   if (!status || !VALID_STATUSES.includes(status)) {
     return res.status(400).json({
       status: 'error',
-      message: `Status must be one of: ${VALID_STATUSES.join(', ')}`,
+      message: `Trạng thái phải là một trong các giá trị: ${VALID_STATUSES.join(', ')}`,
       errorCode: 'INVALID_STATUS',
     });
   }
@@ -259,7 +259,7 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
     if (!request) {
       return res.status(404).json({
         status: 'error',
-        message: 'Maintenance request not found.',
+        message: 'Không tìm thấy yêu cầu bảo trì.',
         errorCode: 'REQUEST_NOT_FOUND',
       });
     }
@@ -273,13 +273,13 @@ router.put('/maintenance/:id', authenticateToken, requireRole('landlord'), async
 
     return res.json({
       status: 'success',
-      message: 'Maintenance request updated successfully.',
+      message: 'Yêu cầu bảo trì đã được cập nhật thành công.',
     });
   } catch (err) {
     console.error('Update maintenance error:', err);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to update maintenance request.',
+      message: 'Có lỗi khi cập nhật yêu cầu bảo trì. Vui lòng thử lại sau.',
       errorCode: 'UPDATE_FAILED',
     });
   }
@@ -304,7 +304,7 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
   ) {
     return res.status(400).json({
       status: 'error',
-      message: 'roomID must be a positive integer, month must be between 1 and 12, and year must be between 2000 and 9999.',
+      message: 'Mã phòng phải là số nguyên dương, tháng phải từ 1 đến 12, và năm phải từ 2000 đến 9999.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -315,7 +315,7 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
     if (!room) {
       return res.status(404).json({
         status: 'error',
-        message: 'Room not found.',
+        message: 'Không tìm thấy phòng.',
         errorCode: 'ROOM_NOT_FOUND',
       });
     }
@@ -332,7 +332,7 @@ router.get('/rooms/:roomID/previous-reading', authenticateToken, requireRole('la
     console.error('Get previous meter reading error:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to get previous meter reading. Please check room and meter reading data.',
+      message: 'Không thể lấy chỉ số trước đó. Vui lòng kiểm tra phòng và chỉ số máy đo.',
       errorCode: 'PREVIOUS_READING_FAILED',
     });
   }
@@ -361,7 +361,7 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
   if (!Number.isInteger(parsedRoomID) || parsedRoomID <= 0) {
     return res.status(400).json({
       status: 'error',
-      message: 'roomID is required.',
+      message: 'Mã phòng không hợp lệ.',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -369,7 +369,7 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
   if (!Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12 || !Number.isInteger(parsedYear)) {
     return res.status(400).json({
       status: 'error',
-      message: 'month and year are required.',
+      message: 'Tháng và Năm phải là số nguyên hợp lệ (tháng 1-12, năm 2000-9999).',
       errorCode: 'INVALID_PAYLOAD',
     });
   }
@@ -380,7 +380,7 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
     if (!room) {
       return res.status(404).json({
         status: 'error',
-        message: 'Room not found.',
+        message: 'Không tìm thấy phòng.',
         errorCode: 'ROOM_NOT_FOUND',
       });
     }
@@ -436,9 +436,52 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
     console.error('Invoice calculation error:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Invoice calculation failed. Please verify service pricing configuration.',
+      message: 'Thanh toán thất bại. Vui lòng kiểm tra cấu hình giá dịch vụ.',
       errorCode: 'INVOICE_CALCULATION_FAILED',
     });
+  }
+});
+
+// --- SPRINT 4: API THỐNG KÊ TÀI CHÍNH (UC-12) ---
+router.get('/financial-stats', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const landlordId = req.user.id;
+
+    // 1. Doanh thu thực tế (Tổng tiền đã thanh toán)
+    const revenueData = await db.getAsync(`
+      SELECT SUM(paid_amount) as totalRevenue
+      FROM invoices i
+      JOIN rooms r ON i.room_id = r.id
+      WHERE r.landlord_id = ? AND i.status = 'paid'`, [landlordId]);
+
+    // 2. Tổng nợ xấu (Hóa đơn quá hạn hoặc chưa đóng đủ)
+    const badDebtData = await db.getAsync(`
+      SELECT SUM(total_amount - paid_amount) as totalBadDebt
+      FROM invoices i
+      JOIN rooms r ON i.room_id = r.id
+      WHERE r.landlord_id = ? AND i.status IN ('unpaid', 'partial')`, [landlordId]);
+
+    // 3. Tỷ lệ lấp đầy phòng
+    const roomStats = await db.getAsync(`
+      SELECT
+        COUNT(*) as totalRooms,
+        SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupiedRooms
+      FROM rooms WHERE landlord_id = ?`, [landlordId]);
+
+    res.json({
+      status: 'success',
+      data: {
+        totalRevenue: revenueData.totalRevenue || 0,
+        badDebt: badDebtData.totalBadDebt || 0,
+        occupancyRate: roomStats.totalRooms > 0
+          ? Math.round((roomStats.occupiedRooms / roomStats.totalRooms) * 100)
+          : 0,
+        totalRooms: roomStats.totalRooms
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Lỗi server khi lấy thống kê' });
   }
 });
 

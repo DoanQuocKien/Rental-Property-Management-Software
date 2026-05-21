@@ -14,6 +14,8 @@ export default function Sidebar() {
     { path: '/rooms', icon: '🏠', label: 'Quản lý phòng' },
     { path: '/tenants', icon: '👥', label: 'Khách thuê' },
     { path: '/invoices', icon: '💰', label: 'Hóa đơn' },
+    { path: '/financial-dashboard', icon: '📈', label: 'Bảng tài chính' },
+    { path: '/notifications', icon: '📢', label: 'Thông báo' },
     { path: '/contract', icon: '📝', label: 'Tạo hợp đồng' },
     { path: '/settings', icon: '⚙️', label: 'Cài đặt' },
     { path: '/meter-reading', icon: '⚡', label: 'Ghi điện nước' },
@@ -65,7 +67,7 @@ export default function Sidebar() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    padding: '12px 20px',
+                    padding: '8px 20px',
                     color: 'white',
                     textDecoration: 'none',
                     background: isActive ? sidebarTheme.activeItem : 'transparent',

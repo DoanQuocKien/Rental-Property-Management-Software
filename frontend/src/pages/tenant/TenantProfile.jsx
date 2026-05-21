@@ -130,12 +130,12 @@ export default function TenantProfile() {
             <h4 style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>👤 Thông tin định danh</h4>
             <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Họ và tên</label>
-                <input style={inputStyle(!editMode)} value={form.name || ''} onChange={e => setForm({...form, name: e.target.value})} disabled={!editMode} />
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Họ và tên *</label>
+                <input style={inputStyle(!editMode)} value={form.name || ''} onChange={e => setForm({...form, name: e.target.value})} disabled={!editMode} required />
               </div>
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Số điện thoại</label>
-                <input style={inputStyle(!editMode)} value={form.phone || ''} onChange={e => setForm({...form, phone: e.target.value})} disabled={!editMode} />
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Số điện thoại *</label>
+                <input style={inputStyle(!editMode)} value={form.phone || ''} onChange={e => setForm({...form, phone: e.target.value})} disabled={!editMode} required/>
               </div>
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Email</label>
@@ -144,26 +144,27 @@ export default function TenantProfile() {
 
               {/* TRƯỜNG: CCCD */}
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Số CCCD/CMND</label>
-                <input style={inputStyle(!editMode)} value={form.citizen_id || ''} onChange={e => setForm({...form, citizen_id: e.target.value})} disabled={!editMode} placeholder="Chưa cập nhật" />
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Số CCCD/CMND *</label>
+                <input style={inputStyle(!editMode)} value={form.citizen_id || ''} onChange={e => setForm({...form, citizen_id: e.target.value})} disabled={!editMode} placeholder="Chưa cập nhật" required/>
               </div>
 
               {/* TRƯỜNG MỚI: NGÀY SINH */}
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Ngày sinh</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Ngày sinh *</label>
                 <input
                   type="date"
                   style={inputStyle(!editMode)}
                   value={form.date_of_birth || ''}
                   onChange={e => setForm({...form, date_of_birth: e.target.value})}
                   disabled={!editMode}
+                  required
                 />
               </div>
 
               {/* TRƯỜNG: ĐỊA CHỈ THƯỜNG TRÚ */}
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Địa chỉ thường trú (ghi trên CCCD)</label>
-                <input style={inputStyle(!editMode)} value={form.permanent_address || ''} onChange={e => setForm({...form, permanent_address: e.target.value})} disabled={!editMode} placeholder="Nhập địa chỉ thường trú" />
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Địa chỉ thường trú (ghi trên CCCD) *</label>
+                <input style={inputStyle(!editMode)} value={form.permanent_address || ''} onChange={e => setForm({...form, permanent_address: e.target.value})} disabled={!editMode} placeholder="Nhập địa chỉ thường trú" required />
               </div>
 
               {editMode && (
