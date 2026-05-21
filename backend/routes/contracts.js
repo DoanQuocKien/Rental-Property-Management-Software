@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { auditMutations } = require('../middleware/audit');
 
 const router = express.Router();
 
@@ -252,7 +253,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // PUT /api/contracts/:id/terminate — Chấm dứt hợp đồng (landlord)
 // ─────────────────────────────────────────────────────────────
-router.put('/:id/terminate', authenticateToken, requireRole('landlord'), async (req, res) => {
+router.put('/:id/terminate', authenticateToken, auditMutations('lease_contracts'), requireRole('landlord'), async (req, res) => {
   const contractId = Number(req.params.id);
 
   if (!Number.isInteger(contractId) || contractId <= 0) {

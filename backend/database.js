@@ -69,6 +69,37 @@ db.closeAsync = () => new Promise((resolve, reject) => {
   });
 });
 
+db.insertAuditLogAsync = (auditLog) => {
+  const payloadText = auditLog.payload === undefined || auditLog.payload === null
+    ? null
+    : JSON.stringify(auditLog.payload);
+
+  return db.runAsync(
+    `INSERT INTO audit_logs (
+      user_id,
+      action,
+      target_table,
+      target_id,
+      path,
+      method,
+      payload,
+      status_code,
+      created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      auditLog.userId ?? null,
+      auditLog.action,
+      auditLog.targetTable,
+      auditLog.targetId ?? null,
+      auditLog.path,
+      auditLog.method,
+      payloadText,
+      auditLog.statusCode ?? null,
+      auditLog.createdAt ?? new Date().toISOString(),
+    ]
+  );
+};
+
 db.serialize(() => {
   db.run('PRAGMA foreign_keys = ON');
 
@@ -271,6 +302,25 @@ db.serialize(() => {
   `);
 
   db.run('CREATE INDEX IF NOT EXISTS idx_revoked_access_expires_at ON revoked_access_tokens(expires_at)');
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      action TEXT NOT NULL,
+      target_table TEXT NOT NULL,
+      target_id TEXT,
+      path TEXT NOT NULL,
+      method TEXT NOT NULL,
+      payload TEXT,
+      status_code INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)');
 
   if (!tokenCleanupInterval) {
     tokenCleanupInterval = setInterval(() => {
