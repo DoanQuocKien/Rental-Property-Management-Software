@@ -442,4 +442,47 @@ router.post('/invoices/calculate', authenticateToken, requireRole('landlord'), a
   }
 });
 
+// --- SPRINT 4: API THỐNG KÊ TÀI CHÍNH (UC-12) ---
+router.get('/financial-stats', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const landlordId = req.user.id;
+
+    // 1. Doanh thu thực tế (Tổng tiền đã thanh toán)
+    const revenueData = await db.getAsync(`
+      SELECT SUM(paid_amount) as totalRevenue
+      FROM invoices i
+      JOIN rooms r ON i.room_id = r.id
+      WHERE r.landlord_id = ? AND i.status = 'paid'`, [landlordId]);
+
+    // 2. Tổng nợ xấu (Hóa đơn quá hạn hoặc chưa đóng đủ)
+    const badDebtData = await db.getAsync(`
+      SELECT SUM(total_amount - paid_amount) as totalBadDebt
+      FROM invoices i
+      JOIN rooms r ON i.room_id = r.id
+      WHERE r.landlord_id = ? AND i.status IN ('unpaid', 'partial')`, [landlordId]);
+
+    // 3. Tỷ lệ lấp đầy phòng
+    const roomStats = await db.getAsync(`
+      SELECT
+        COUNT(*) as totalRooms,
+        SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupiedRooms
+      FROM rooms WHERE landlord_id = ?`, [landlordId]);
+
+    res.json({
+      status: 'success',
+      data: {
+        totalRevenue: revenueData.totalRevenue || 0,
+        badDebt: badDebtData.totalBadDebt || 0,
+        occupancyRate: roomStats.totalRooms > 0
+          ? Math.round((roomStats.occupiedRooms / roomStats.totalRooms) * 100)
+          : 0,
+        totalRooms: roomStats.totalRooms
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Lỗi server khi lấy thống kê' });
+  }
+});
+
 module.exports = router;
