@@ -3,6 +3,12 @@ const db = require('../database');
 const bcrypt = require('bcryptjs');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// --- CẤU HÌNH MULTER LƯU VÀO RAM (KHÔNG DÙNG THƯ MỤC UPLOADS) ---
+const multer = require('multer');
+const storage = multer.memoryStorage(); // Lưu tạm vào RAM để chuyển sang Base64
+const upload = multer({ storage: storage });
+// ---------------------------------------------------------------
+
 const router = express.Router();
 
 // --- API Quản lý Khách thuê (Landlord) ---
@@ -10,9 +16,9 @@ const router = express.Router();
 // GET /api/tenants - Lấy danh sách khách thuê
 router.get('/', authenticateToken, requireRole('landlord'), (req, res) => {
   db.all(
-    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, status, created_at, updated_at 
-     FROM users 
-     WHERE role = 'tenant' OR role = 'Tenant' 
+    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, status, created_at, updated_at
+     FROM users
+     WHERE role = 'tenant' OR role = 'Tenant'
      ORDER BY created_at DESC`,
     [],
     (err, tenants) => {
@@ -22,10 +28,49 @@ router.get('/', authenticateToken, requireRole('landlord'), (req, res) => {
   );
 });
 
+// ───────────────────────────────────────────────────────────────
+// GET /api/tenants/account-list — Danh sách tài khoản người thuê
+// (Chỉ lấy những người thuê có hợp đồng hoạt động với landlord)
+// ───────────────────────────────────────────────────────────────
+router.get('/account-list', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const tenants = await db.allAsync(
+      `SELECT DISTINCT
+         u.id,
+         COALESCE(u.full_name, u.name) AS name,
+         u.email,
+         u.phone_number AS phone,
+         u.citizen_id,
+         COUNT(lc.id) AS active_contracts,
+         GROUP_CONCAT(r.name) AS room_names
+       FROM users u
+       JOIN lease_contracts lc ON u.id = lc.tenant_id
+       JOIN rooms r ON lc.room_id = r.id
+       WHERE r.landlord_id = ? AND lc.status = 'active'
+       GROUP BY u.id
+       ORDER BY u.name ASC`,
+      [req.user.id]
+    );
+
+    return res.json({
+      status: 'success',
+      data: tenants || [],
+      count: tenants?.length || 0
+    });
+  } catch (err) {
+    console.error('Get account list error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi tải danh sách tài khoản.',
+      errorCode: 'FETCH_FAILED'
+    });
+  }
+});
+
 // POST /api/tenants - Thêm mới khách thuê
 router.post('/', authenticateToken, requireRole('landlord'), async (req, res) => {
   const { name, email, password, phone, citizen_id, permanent_address, date_of_birth, gender } = req.body;
-  
+
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Tên, email và mật khẩu là bắt buộc' });
   }
@@ -52,7 +97,13 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 });
 
 // GET /api/tenants/profile - Lấy thông tin cá nhân người thuê
-router.get('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
+router.get('/profile', authenticateToken, (req, res) => {
+  // Allow both tenants and landlords to get their profile
+  const allowedRoles = ['tenant', 'landlord', 'Tenant', 'Landlord'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   db.get('SELECT id, name, email, phone, citizen_id, permanent_address, date_of_birth, gender, created_at FROM users WHERE id = ?',
     [req.user.id],
     (err, user) => {
@@ -63,8 +114,14 @@ router.get('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
   );
 });
 
-// PUT /api/tenants/profile - Cập nhật thông tin cá nhân
-router.put('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
+// PUT /api/tenants/profile - Cập nhật thông tin cá nhân (for both tenants and landlords)
+router.put('/profile', authenticateToken, (req, res) => {
+  // Allow both tenants and landlords to update their profile
+  const allowedRoles = ['tenant', 'landlord', 'Tenant', 'Landlord'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   const { name, phone, citizen_id, permanent_address, date_of_birth, gender } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Tên không được để trống' });
@@ -158,7 +215,7 @@ router.post('/invoices/:id/pay', authenticateToken, requireRole('tenant'), (req,
 
       db.run(
         `UPDATE invoices SET status = 'paid', payment_method = ?, paid_at = CURRENT_TIMESTAMP,
-         updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+         payment_status = 'Paid', paid_amount = total_amount, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         [payment_method, req.params.id],
         function (err) {
           if (err) return res.status(500).json({ error: 'Thanh toán thất bại' });
@@ -184,9 +241,16 @@ router.get('/maintenance', authenticateToken, requireRole('tenant'), (req, res) 
   );
 });
 
-// POST /api/tenants/maintenance - Gửi yêu cầu bảo trì mới
-router.post('/maintenance', authenticateToken, requireRole('tenant'), (req, res) => {
+// --- TẠO YÊU CẦU BẢO TRÌ (ĐÃ UPDATE NHẬN ẢNH BẰNG BASE64) ---
+router.post('/maintenance', authenticateToken, requireRole('tenant'), upload.single('image'), (req, res) => {
   const { description, category } = req.body;
+
+  // NẾU CÓ ẢNH: Mã hóa nó thành chuỗi Base64 để lưu thẳng vào Database
+  let issue_photo = null;
+  if (req.file) {
+    const base64Image = req.file.buffer.toString('base64');
+    issue_photo = `data:${req.file.mimetype};base64,${base64Image}`;
+  }
 
   if (!description || description.trim().length === 0) {
     return res.status(400).json({ error: 'Vui lòng nhập mô tả vấn đề' });
@@ -206,15 +270,16 @@ router.post('/maintenance', authenticateToken, requireRole('tenant'), (req, res)
       const priority = isHighPriority ? 'high' : 'normal';
 
       db.run(
-        `INSERT INTO maintenance_requests (contract_id, room_id, tenant_id, description, category, priority, status)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-        [contract.id, contract.room_id, req.user.id, description.trim(), category || 'general', priority],
+        `INSERT INTO maintenance_requests (contract_id, room_id, tenant_id, description, category, priority, status, issue_photo)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+        [contract.id, contract.room_id, req.user.id, description.trim(), category || 'general', priority, issue_photo],
         function (err) {
           if (err) return res.status(500).json({ error: 'Gửi yêu cầu thất bại' });
           res.status(201).json({
             message: 'Gửi yêu cầu thành công',
             requestId: this.lastID,
-            priority
+            priority,
+            photo: issue_photo
           });
         }
       );
@@ -222,7 +287,7 @@ router.post('/maintenance', authenticateToken, requireRole('tenant'), (req, res)
   );
 });
 
-// --- API Quản lý theo ID (cần đặt dưới cùng để tránh ghi đè các route như /profile, /contract) ---
+// --- API Quản lý theo ID ---
 
 // PUT /api/tenants/:id/status - Duyệt/Kích hoạt hoặc Khóa tài khoản khách thuê
 router.put('/:id/status', authenticateToken, requireRole('landlord'), (req, res) => {
@@ -234,7 +299,7 @@ router.put('/:id/status', authenticateToken, requireRole('landlord'), (req, res)
   }
 
   db.run(
-    `UPDATE users SET status = ?, updated_at = CURRENT_TIMESTAMP 
+    `UPDATE users SET status = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ? AND (role = 'tenant' OR role = 'Tenant')`,
     [status, req.params.id],
     function (err) {
@@ -248,7 +313,7 @@ router.put('/:id/status', authenticateToken, requireRole('landlord'), (req, res)
 // GET /api/tenants/:id - Lấy chi tiết khách thuê
 router.get('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
   db.get(
-    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, status, created_at, updated_at 
+    `SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, status, created_at, updated_at
      FROM users WHERE id = ? AND (role = 'tenant' OR role = 'Tenant')`,
     [req.params.id],
     (err, tenant) => {
@@ -265,7 +330,7 @@ router.put('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
   if (!name) return res.status(400).json({ error: 'Tên không được để trống' });
 
   db.run(
-    `UPDATE users SET name = ?, phone = ?, citizen_id = ?, permanent_address = ?, date_of_birth = ?, gender = ?, updated_at = CURRENT_TIMESTAMP 
+    `UPDATE users SET name = ?, phone = ?, citizen_id = ?, permanent_address = ?, date_of_birth = ?, gender = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ? AND (role = 'tenant' OR role = 'Tenant')`,
     [name, phone || null, citizen_id || null, permanent_address || null, date_of_birth || null, gender || null, req.params.id],
     function (err) {

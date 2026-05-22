@@ -38,7 +38,7 @@ router.get('/', authenticateToken, async (req, res) => {
     return res.json({ status: 'success', data: requests });
   } catch (error) {
     console.error('Fetch requests error:', error);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch maintenance requests.' });
+    return res.status(500).json({ status: 'error', message: 'Có lỗi khi lấy danh sách yêu cầu bảo trì. Vui lòng thử lại sau.' });
   }
 });
 
@@ -46,23 +46,23 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   const reqId = Number(req.params.id);
   if (!Number.isInteger(reqId)) {
-    return res.status(400).json({ status: 'error', message: 'Invalid ID' });
+    return res.status(400).json({ status: 'error', message: 'Mã yêu cầu không hợp lệ.' });
   }
 
   try {
     const request = await db.getAsync(`SELECT * FROM maintenance_requests WHERE id = ?`, [reqId]);
     if (!request) {
-      return res.status(404).json({ status: 'error', message: 'Maintenance request not found.' });
+      return res.status(404).json({ status: 'error', message: 'Yêu cầu bảo trì không tồn tại.' });
     }
 
     if (req.user.role.toLowerCase() === 'tenant' && request.tenant_id !== req.user.id) {
-      return res.status(403).json({ status: 'error', message: 'Access denied.' });
+      return res.status(403).json({ status: 'error', message: 'Truy cập bị từ chối.' });
     }
 
     return res.json({ status: 'success', data: request });
   } catch (error) {
     console.error('Fetch request error:', error);
-    return res.status(500).json({ status: 'error', message: 'Internal server error.' });
+    return res.status(500).json({ status: 'error', message: 'Có lỗi khi lấy thông tin yêu cầu bảo trì. Vui lòng thử lại sau.' });
   }
 });
 
@@ -71,7 +71,7 @@ router.post('/', authenticateToken, upload.single('issuePhoto'), async (req, res
   const { contractID, roomID, description, category, priority } = req.body;
   
   if (!description) {
-    return res.status(400).json({ status: 'error', message: 'Description is required.' });
+    return res.status(400).json({ status: 'error', message: 'Mô tả sự cố là trường bắt buộc.' });
   }
 
   const tenantId = req.user.id;
@@ -95,7 +95,7 @@ router.post('/', authenticateToken, upload.single('issuePhoto'), async (req, res
 
     return res.status(201).json({
       status: 'success',
-      message: 'Maintenance request submitted successfully.',
+      message: 'Yêu cầu bảo trì đã được gửi thành công.',
       data: {
         id: result.lastID,
         contractID, roomID, tenantId, description, category, priority, status: 'pending', issuePhoto
@@ -103,7 +103,7 @@ router.post('/', authenticateToken, upload.single('issuePhoto'), async (req, res
     });
   } catch (error) {
     console.error('Create request error:', error);
-    return res.status(500).json({ status: 'error', message: 'Failed to submit maintenance request.' });
+    return res.status(500).json({ status: 'error', message: 'Có lỗi khi gửi yêu cầu bảo trì. Vui lòng thử lại sau.' });
   }
 });
 
@@ -116,17 +116,17 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
 
   const { status, resolutionNote, staffId, cost } = req.body;
   if (!status) {
-    return res.status(400).json({ status: 'error', message: 'Status is required.' });
+    return res.status(400).json({ status: 'error', message: 'Trạng thái là trường bắt buộc.' });
   }
 
   try {
     const existing = await db.getAsync(`SELECT id FROM maintenance_requests WHERE id = ?`, [reqId]);
     if (!existing) {
-      return res.status(404).json({ status: 'error', message: 'Maintenance request not found.' });
+      return res.status(404).json({ status: 'error', message: 'Yêu cầu bảo trì không tồn tại.' });
     }
 
     if (req.user.role.toLowerCase() === 'tenant') {
-      return res.status(403).json({ status: 'error', message: 'Only managers or landlords can update the status.' });
+      return res.status(403).json({ status: 'error', message: 'Chỉ quản lý hoặc chủ nhà mới có thể cập nhật trạng thái.' });
     }
     
     await db.runAsync(
@@ -140,11 +140,11 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
       [status, resolutionNote, staffId, cost, reqId]
     );
 
-    const updated = await db.getAsync(`SELECT id, status, resolution_note, staff_id, cost, updated_at FROM maintenance_requests WHERE id = ?`, [reqId]);
-    return res.json({ status: 'success', message: 'Status updated successfully.', data: updated });
+    const updated = await db.getAsync(`SELECT id, status, resolution_note, staff_id, updated_at FROM maintenance_requests WHERE id = ?`, [reqId]);
+    return res.json({ status: 'success', message: 'Trạng thái đã được cập nhật thành công.', data: updated });
   } catch (error) {
     console.error('Update status error:', error);
-    return res.status(500).json({ status: 'error', message: 'Failed to update status.' });
+    return res.status(500).json({ status: 'error', message: 'Có lỗi khi cập nhật trạng thái. Vui lòng thử lại sau.' });
   }
 });
 
@@ -152,7 +152,7 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, upload.single('issuePhoto'), async (req, res) => {
   const reqId = Number(req.params.id);
   if (!Number.isInteger(reqId)) {
-    return res.status(400).json({ status: 'error', message: 'Invalid ID' });
+    return res.status(400).json({ status: 'error', message: 'Mã yêu cầu không hợp lệ.' });
   }
 
   const { description, category, priority, status, assignedTo, resolutionNote, staffId, cost } = req.body;
@@ -161,15 +161,15 @@ router.put('/:id', authenticateToken, upload.single('issuePhoto'), async (req, r
   try {
     const existing = await db.getAsync(`SELECT * FROM maintenance_requests WHERE id = ?`, [reqId]);
     if (!existing) {
-      return res.status(404).json({ status: 'error', message: 'Maintenance request not found.' });
+      return res.status(404).json({ status: 'error', message: 'Yêu cầu bảo trì không tồn tại.' });
     }
 
     if (req.user.role.toLowerCase() === 'tenant') {
       if (existing.tenant_id !== req.user.id) {
-        return res.status(403).json({ status: 'error', message: 'Access denied.' });
+        return res.status(403).json({ status: 'error', message: 'Truy cập bị từ chối.' });
       }
       if (existing.status !== 'pending') {
-        return res.status(400).json({ status: 'error', message: 'Cannot update a request that is already being processed.' });
+        return res.status(400).json({ status: 'error', message: 'Không thể cập nhật yêu cầu đã được xử lý.' });
       }
       
       await db.runAsync(
@@ -200,10 +200,10 @@ router.put('/:id', authenticateToken, upload.single('issuePhoto'), async (req, r
     }
 
     const updated = await db.getAsync(`SELECT * FROM maintenance_requests WHERE id = ?`, [reqId]);
-    return res.json({ status: 'success', message: 'Maintenance request updated successfully.', data: updated });
+    return res.json({ status: 'success', message: 'Yêu cầu bảo trì đã được cập nhật thành công.', data: updated });
   } catch (error) {
     console.error('Update request error:', error);
-    return res.status(500).json({ status: 'error', message: 'Failed to update maintenance request.' });
+    return res.status(500).json({ status: 'error', message: 'Có lỗi khi cập nhật yêu cầu bảo trì. Vui lòng thử lại sau.' });
   }
 });
 
@@ -214,17 +214,17 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
   try {
     const existing = await db.getAsync(`SELECT * FROM maintenance_requests WHERE id = ?`, [reqId]);
-    if (!existing) return res.status(404).json({ status: 'error', message: 'Maintenance request not found.' });
+    if (!existing) return res.status(404).json({ status: 'error', message: 'Yêu cầu bảo trì không tồn tại.' });
 
     if (req.user.role.toLowerCase() === 'tenant') {
-       if (existing.tenant_id !== req.user.id) return res.status(403).json({ status: 'error', message: 'Access denied.' });
-       if (existing.status !== 'pending') return res.status(400).json({ status: 'error', message: 'Cannot delete a request that is already being processed.' });
+       if (existing.tenant_id !== req.user.id) return res.status(403).json({ status: 'error', message: 'Truy cập bị từ chối.' });
+       if (existing.status !== 'pending') return res.status(400).json({ status: 'error', message: 'Không thể xóa yêu cầu đã được xử lý.' });
     } else {
        // Check if landlord owns the room
        if (existing.room_id) {
            const room = await db.getAsync(`SELECT landlord_id FROM rooms WHERE id = ?`, [existing.room_id]);
            if (room && room.landlord_id !== req.user.id) {
-               return res.status(403).json({ status: 'error', message: 'Access denied.' });
+               return res.status(403).json({ status: 'error', message: 'Truy cập bị từ chối.' });
            }
        }
     }
@@ -237,10 +237,10 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     await db.runAsync(`DELETE FROM maintenance_requests WHERE id = ?`, [reqId]);
-    return res.json({ status: 'success', message: 'Maintenance request deleted successfully.' });
+    return res.json({ status: 'success', message: 'Yêu cầu bảo trì đã được xóa thành công.' });
   } catch (error) {
     console.error('Delete request error:', error);
-    return res.status(500).json({ status: 'error', message: 'Internal server error.' });
+    return res.status(500).json({ status: 'error', message: 'Có lỗi khi xóa yêu cầu bảo trì. Vui lòng thử lại sau.' });
   }
 });
 

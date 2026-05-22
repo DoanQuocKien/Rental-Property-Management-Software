@@ -4,6 +4,11 @@ const path = require('path');
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'rental.db');
 
 const db = new sqlite3.Database(DB_PATH);
+let tokenCleanupInterval = null;
+
+function buildDemoRoomName(letterIndex, numberIndex) {
+  return `${String.fromCharCode(65 + letterIndex)}${numberIndex}`;
+}
 
 function ensureColumn(tableName, columnName, columnDef) {
   db.all(`PRAGMA table_info(${tableName})`, (err, columns) => {
@@ -140,6 +145,8 @@ db.serialize(() => {
 
   ensureColumn('lease_contracts', 'rental_price', 'REAL');
   ensureColumn('lease_contracts', 'status', "TEXT DEFAULT 'active'");
+  ensureColumn('lease_contracts', 'electricity_price', 'REAL DEFAULT 0');
+  ensureColumn('lease_contracts', 'water_price', 'REAL DEFAULT 0');
 
   db.run(`
     CREATE TABLE IF NOT EXISTS meter_readings (
@@ -176,6 +183,7 @@ db.serialize(() => {
       water_amount REAL DEFAULT 0,
       service_amount REAL DEFAULT 0,
       total_amount REAL NOT NULL,
+      paid_amount REAL NOT NULL DEFAULT 0,
       payment_status TEXT NOT NULL DEFAULT 'Unpaid',
       status TEXT DEFAULT 'unpaid',
       due_date DATE NOT NULL,
@@ -199,6 +207,7 @@ db.serialize(() => {
   ensureColumn('invoices', 'electricity_amount', 'REAL DEFAULT 0');
   ensureColumn('invoices', 'water_amount', 'REAL DEFAULT 0');
   ensureColumn('invoices', 'service_amount', 'REAL DEFAULT 0');
+  ensureColumn('invoices', 'paid_amount', 'REAL NOT NULL DEFAULT 0');
   ensureColumn('invoices', 'status', "TEXT DEFAULT 'unpaid'");
   ensureColumn('invoices', 'payment_method', 'TEXT');
   ensureColumn('invoices', 'paid_at', 'DATETIME');
@@ -234,6 +243,35 @@ db.serialize(() => {
   ensureColumn('maintenance_requests', 'resolution_note', 'TEXT');
   ensureColumn('maintenance_requests', 'issue_photo', 'TEXT');
   ensureColumn('maintenance_requests', 'cost', 'REAL DEFAULT 0');
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user_id INTEGER NOT NULL,
+      recipient_type TEXT NOT NULL DEFAULT 'all_tenants',
+      recipient_id INTEGER,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      read_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_from_user_id ON notifications(from_user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_recipient_type ON notifications(recipient_type)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)');
+
+  ensureColumn('notifications', 'from_user_id', 'INTEGER NOT NULL');
+  ensureColumn('notifications', 'recipient_type', "TEXT NOT NULL DEFAULT 'all_tenants'");
+  ensureColumn('notifications', 'recipient_id', 'INTEGER');
+  ensureColumn('notifications', 'title', 'TEXT NOT NULL');
+  ensureColumn('notifications', 'message', 'TEXT NOT NULL');
+  ensureColumn('notifications', 'is_read', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('notifications', 'read_at', 'DATETIME');
 
   db.run(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -281,6 +319,92 @@ db.serialize(() => {
 
   db.run('CREATE INDEX IF NOT EXISTS idx_notifications_sender_id ON notifications(sender_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_notifications_room_id ON notifications(room_id)');
+
+  if (!tokenCleanupInterval) {
+    tokenCleanupInterval = setInterval(() => {
+      db.run(
+        `DELETE FROM revoked_access_tokens WHERE expires_at < datetime('now')`,
+        (err) => { if (err) console.error('Cleanup revoked_access_tokens error:', err.message); }
+      );
+      db.run(
+        `DELETE FROM refresh_tokens WHERE revoked = 1 AND revoked_at < datetime('now', '-7 days')`,
+        (err) => { if (err) console.error('Cleanup refresh_tokens error:', err.message); }
+      );
+    }, 60 * 60 * 1000);
+    if (typeof tokenCleanupInterval.unref === 'function') {
+      tokenCleanupInterval.unref();
+    }
+  }
+
+  (async () => {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    try {
+      const roomCountRow = await db.getAsync('SELECT COUNT(*) AS count FROM rooms');
+      if (Number(roomCountRow?.count || 0) > 0) {
+        return;
+      }
+
+      const landlords = await db.allAsync(
+        `SELECT id
+         FROM users
+         WHERE role IN ('landlord', 'Owner', 'Manager')
+           AND status = 'active'`
+      );
+
+      if (!landlords.length) {
+        return;
+      }
+
+      const letters = Array.from({ length: 26 }, (_, index) => index);
+      const numbers = Array.from({ length: 21 }, (_, index) => index);
+
+      await db.runAsync('BEGIN TRANSACTION');
+
+      try {
+        for (const landlord of landlords) {
+          for (const letterIndex of letters) {
+            for (const numberIndex of numbers) {
+              const roomName = buildDemoRoomName(letterIndex, numberIndex);
+              const sequenceIndex = letterIndex * numbers.length + numberIndex;
+
+              await db.runAsync(
+                `INSERT INTO rooms (name, description, category, price, area, max_occupants, status, landlord_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  roomName,
+                  `Phòng trống mẫu ${roomName}`,
+                  'Demo',
+                  1200000 + sequenceIndex * 15000,
+                  12 + (numberIndex % 9) + (letterIndex % 4),
+                  1 + (numberIndex % 3 === 0 ? 1 : 0),
+                  'available',
+                  landlord.id,
+                ]
+              );
+            }
+          }
+        }
+
+        await db.runAsync('COMMIT');
+        console.log(`Seeded demo rooms for ${landlords.length} landlord account(s).`);
+      } catch (seedError) {
+        await db.runAsync('ROLLBACK').catch(() => { });
+        throw seedError;
+      }
+    } catch (seedError) {
+      console.error('Failed to seed demo rooms:', seedError);
+    }
+  })();
 });
+
+db.stopBackgroundJobs = () => {
+  if (tokenCleanupInterval) {
+    clearInterval(tokenCleanupInterval);
+    tokenCleanupInterval = null;
+  }
+};
 
 module.exports = db;

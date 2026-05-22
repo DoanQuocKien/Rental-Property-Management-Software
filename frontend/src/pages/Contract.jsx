@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 const today = new Date().toISOString().split('T')[0];
-const nextYear = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0];
+const nextYear = new Date(Date.now() + 365 * MILLISECONDS_PER_DAY).toISOString().split('T')[0];
 
 // ── Print helper ──────────────────────────────────────────────────────────────
 function printContract(contractHTML) {
@@ -194,7 +195,7 @@ export default function Contract() {
     room_id: '',
     tenant_id: '',
     rental_price: '',
-    deposit: '',
+    deposit: '0',
     electricity_price: '',
     water_price: '',
     start_date: today,
