@@ -308,6 +308,39 @@ db.serialize(() => {
 
   db.run('CREATE INDEX IF NOT EXISTS idx_revoked_access_expires_at ON revoked_access_tokens(expires_at)');
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      landlord_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER,
+      description TEXT,
+      old_values TEXT,
+      new_values TEXT,
+      status TEXT DEFAULT 'success',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (landlord_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_landlord_id ON audit_logs(landlord_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)');
+
+  ensureColumn('audit_logs', 'user_id', 'INTEGER NOT NULL');
+  ensureColumn('audit_logs', 'landlord_id', 'INTEGER NOT NULL');
+  ensureColumn('audit_logs', 'action', 'TEXT NOT NULL');
+  ensureColumn('audit_logs', 'entity_type', 'TEXT NOT NULL');
+  ensureColumn('audit_logs', 'entity_id', 'INTEGER');
+  ensureColumn('audit_logs', 'description', 'TEXT');
+  ensureColumn('audit_logs', 'old_values', 'TEXT');
+  ensureColumn('audit_logs', 'new_values', 'TEXT');
+  ensureColumn('audit_logs', 'status', "TEXT DEFAULT 'success'");
+
   if (!tokenCleanupInterval) {
     tokenCleanupInterval = setInterval(() => {
       db.run(

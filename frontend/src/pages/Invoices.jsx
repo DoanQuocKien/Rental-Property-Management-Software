@@ -154,6 +154,7 @@ function DetailModal({ inv, onClose, onMarkPaid }) {
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState('');
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const isPaid = inv.payment_status === 'Paid' || inv.status === 'paid';
 
@@ -164,6 +165,37 @@ function DetailModal({ inv, onClose, onMarkPaid }) {
       await onMarkPaid(inv.id, method);
       onClose();
     } finally { setLoading(false); }
+  };
+
+  const handleDownloadPDF = async () => {
+    setDownloading(true);
+    try {
+      // Request PDF from backend with responseType: 'blob'
+      const response = await api.get(`/invoices/${inv.id}/pdf`, {
+        responseType: 'blob'
+      });
+
+      // Create a blob URL from the response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary link element and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `HoaDon_${inv.id}_Thang${inv.month}_${inv.year}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+      // Show error message - could be toast notification
+      alert('❌ Không thể tải PDF. Vui lòng thử lại sau.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const rows = [
@@ -202,10 +234,26 @@ function DetailModal({ inv, onClose, onMarkPaid }) {
             </span>
           </div>
 
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button 
+              className="inv-btn-save" 
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              style={{ flex: 1 }}
+            >
+              {downloading ? <><span className="inv-spin" />Đang tải...</> : '📥 Tải PDF'}
+            </button>
+            {!isPaid && (
+              <button className="inv-btn-save" onClick={() => setPaying(!paying)} style={{ flex: 1 }}>
+                💳 Thanh toán
+              </button>
+            )}
+          </div>
+
           {!isPaid && (
             <div style={{ marginTop: 16 }}>
               {!paying ? (
-                <button className="inv-btn-save" onClick={() => setPaying(true)}>
+                <button className="inv-btn-save" onClick={() => setPaying(true)} style={{ width: '100%' }}>
                   💳 Ghi nhận thanh toán
                 </button>
               ) : (
@@ -313,8 +361,20 @@ function CreateForm({ rooms, onCreated, showToast }) {
         serviceUnitPrices: { electricityUnitPrice: Number(elecPrice), waterUnitPrice: Number(waterPrice) },
       });
       setResult(res.data.data);
-    } catch (e) {
-      showToast(e.response?.data?.message || 'Tính toán thất bại', false);
+    } catch (error) {
+      // Enhanced error handling
+      const errorMsg = error.response?.data?.message || error.message || 'Tính toán thất bại';
+      const errorCode = error.response?.data?.errorCode;
+      
+      let userMessage = errorMsg;
+      if (errorCode === 'INVALID_PAYLOAD') {
+        userMessage = '❌ Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các giá trị.';
+      } else if (errorCode === 'CALCULATION_FAILED') {
+        userMessage = '❌ Không thể tính toán. Vui lòng kiểm tra lại dữ liệu nhập.';
+      }
+      
+      showToast(userMessage, false);
+      console.error('Calculation error:', error);
     } finally { setCalcLoading(false); }
   };
 
@@ -322,46 +382,95 @@ function CreateForm({ rooms, onCreated, showToast }) {
     if (!result) return;
     setSaveLoading(true);
     try {
+      // Validate inputs before saving
+      if (!roomId) {
+        showToast('❌ Chưa chọn phòng', false);
+        return;
+      }
+      
       // 1. Lưu meter reading
-      const mrRes = await api.post('/meter-readings', {
-        roomID: Number(roomId),
-        electricityIndex: Number(currElec),
-        waterIndex: Number(currWater),
-        recordedDate: new Date().toISOString().slice(0, 10),
-      });
+      let meterReadingId = null;
+      try {
+        const mrRes = await api.post('/meter-readings', {
+          roomID: Number(roomId),
+          electricityIndex: Number(currElec),
+          waterIndex: Number(currWater),
+          recordedDate: new Date().toISOString().slice(0, 10),
+        });
+        meterReadingId = mrRes.data?.data?.id;
+      } catch (mrError) {
+        console.error('Meter reading creation error:', mrError);
+        const mrMsg = mrError.response?.data?.message || 'Không thể lưu chỉ số đồng hồ';
+        showToast(`❌ ${mrMsg}`, false);
+        return;
+      }
 
       // 2. Lấy contract của phòng
-      const contractsRes = await api.get('/contracts?status=active').catch(() => ({ data: { data: [] } }));
-      const contracts = contractsRes.data.data || [];
-      const matchedContract = contracts.find(c => String(c.roomID) === String(roomId));
+      let matchedContract = null;
+      try {
+        const contractsRes = await api.get('/contracts?status=active');
+        const contracts = contractsRes.data.data || [];
+        matchedContract = contracts.find(c => String(c.roomID) === String(roomId));
+      } catch (contractError) {
+        console.error('Contract fetch error:', contractError);
+        // Continue even if we can't fetch contracts
+      }
 
-      // 3. Tạo hóa đơn
+      // 3. Tạo hóa đơn với better error handling
       const bd = result.breakdown;
-      await api.post('/invoices', {
-        roomID: Number(roomId),
-        contractID: matchedContract?.contractID || null,
-        readingID: mrRes.data?.data?.id || null,
-        month, year,
-        rentAmount: bd.roomPrice,
-        electricityAmount: bd.electricityAmount,
-        waterAmount: bd.waterAmount,
-        serviceAmount: bd.serviceAmount,
-        totalAmount: result.totalAmount,
-        dueDate,
-      });
+      try {
+        const invoiceData = {
+          roomID: Number(roomId),
+          contractID: matchedContract?.contractID || null,
+          readingID: meterReadingId,
+          month: Number(month),
+          year: Number(year),
+          rentAmount: Number(bd.roomPrice) || 0,
+          electricityAmount: Number(bd.electricityAmount) || 0,
+          waterAmount: Number(bd.waterAmount) || 0,
+          serviceAmount: Number(bd.serviceAmount) || 0,
+          totalAmount: Number(result.totalAmount),
+          dueDate: dueDate,
+        };
+        
+        await api.post('/invoices', invoiceData);
 
-      // Show appropriate toast based on whether it's first reading
-      const successMsg = !prevReading
-        ? '✅ Đã lưu chỉ số kỳ đầu tiên và tạo hóa đơn thành công!'
-        : '✅ Tạo hóa đơn thành công!';
-      showToast(successMsg, true);
-      
-      setResult(null);
-      setCurrElec(''); setCurrWater('');
-      await fetchPrev(roomId, month, year);
-      onCreated();
-    } catch (e) {
-      showToast(e.response?.data?.message || 'Lưu hóa đơn thất bại', false);
+        // Show appropriate toast based on whether it's first reading
+        const successMsg = !prevReading
+          ? '✅ Đã lưu chỉ số kỳ đầu tiên và tạo hóa đơn thành công!'
+          : '✅ Tạo hóa đơn thành công!';
+        showToast(successMsg, true);
+        
+        setResult(null);
+        setCurrElec(''); setCurrWater('');
+        await fetchPrev(roomId, month, year);
+        onCreated();
+      } catch (invoiceError) {
+        console.error('Invoice creation error:', invoiceError);
+        
+        // Handle specific error codes
+        const errorCode = invoiceError.response?.data?.errorCode;
+        const errorMsg = invoiceError.response?.data?.message;
+        
+        let userMessage = errorMsg || 'Không thể tạo hóa đơn. Vui lòng thử lại.';
+        
+        if (errorCode === 'INVALID_PAYLOAD') {
+          userMessage = '❌ Dữ liệu không hợp lệ. Kiểm tra các trường bắt buộc.';
+        } else if (errorCode === 'ROOM_NOT_FOUND') {
+          userMessage = '❌ Không tìm thấy phòng. Vui lòng chọn phòng khác.';
+        } else if (errorCode === 'DUPLICATE_UTILITY_BILL') {
+          userMessage = '❌ Hóa đơn tiện ích đã tồn tại cho kỳ này. Không thể tạo hóa đơn trùng lặp.';
+        } else if (errorCode === 'INVOICE_CREATE_FAILED') {
+          userMessage = '❌ Lỗi tạo hóa đơn. Vui lòng thử lại sau.';
+        } else if (errorCode === 'BILLING_PERIOD_INVALID') {
+          userMessage = '❌ Kỳ hóa đơn không thể trước ngày khởi tạo hợp đồng.';
+        }
+        
+        showToast(userMessage, false);
+      }
+    } catch (error) {
+      console.error('Unexpected save error:', error);
+      showToast('❌ Lỗi không xác định. Vui lòng thử lại sau.', false);
     } finally { setSaveLoading(false); }
   };
 
@@ -794,22 +903,51 @@ export default function Invoices() {
 
   const handleMarkPaid = async (id, method) => {
     try {
+      if (!method) {
+        showToast('❌ Vui lòng chọn hình thức thanh toán', false);
+        return;
+      }
+
       await api.put(`/invoices/${id}/pay`, { payment_method: method });
-      showToast('✅ Đã ghi nhận thanh toán!', true);
+      showToast('✅ Đã ghi nhận thanh toán thành công!', true);
       setReload(r => r + 1);
-    } catch (err) {
-      // Thử endpoint patch nếu put thất bại
-      try {
-        await api.patch(`/invoices/${id}`, {
-          status: 'paid',
-          payment_status: 'Paid',
-          payment_method: method,
-          paid_at: new Date().toISOString(),
-        });
-        showToast('✅ Đã cập nhật thanh toán!', true);
-        setReload(r => r + 1);
-      } catch {
-        showToast('❌ Cập nhật thất bại', false);
+    } catch (error) {
+      console.error('Payment error:', error);
+      
+      const errorCode = error.response?.data?.errorCode;
+      const errorMsg = error.response?.data?.message;
+      
+      let userMessage = errorMsg || 'Không thể ghi nhận thanh toán. Vui lòng thử lại.';
+      
+      if (errorCode === 'INVALID_PAYLOAD') {
+        userMessage = '❌ Dữ liệu không hợp lệ. Vui lòng chọn hình thức thanh toán.';
+      } else if (errorCode === 'NOT_FOUND') {
+        userMessage = '❌ Không tìm thấy hóa đơn.';
+      } else if (errorCode === 'ALREADY_PAID') {
+        userMessage = '❌ Hóa đơn này đã được thanh toán rồi.';
+      } else if (errorCode === 'FORBIDDEN') {
+        userMessage = '❌ Bạn không có quyền thanh toán hóa đơn này.';
+      } else if (errorCode === 'UPDATE_FAILED') {
+        userMessage = '❌ Lỗi cập nhật thanh toán. Vui lòng thử lại.';
+      }
+      
+      showToast(userMessage, false);
+      
+      // Try fallback endpoint if put fails
+      if (error.response?.status === 404 || error.response?.status === 405) {
+        try {
+          await api.patch(`/invoices/${id}`, {
+            status: 'paid',
+            payment_status: 'Paid',
+            payment_method: method,
+            paid_at: new Date().toISOString(),
+          });
+          showToast('✅ Đã cập nhật thanh toán!', true);
+          setReload(r => r + 1);
+        } catch (fallbackError) {
+          console.error('Fallback payment error:', fallbackError);
+          showToast('❌ Cập nhật thất bại. Vui lòng thử lại sau.', false);
+        }
       }
     }
   };
@@ -822,8 +960,27 @@ export default function Invoices() {
       await api.delete(`/invoices/${id}`);
       showToast('✅ Xóa hóa đơn và chỉ số thành công!', true);
       setReload(r => r + 1);
-    } catch (err) {
-      showToast(err.response?.data?.message || '❌ Xóa hóa đơn thất bại', false);
+    } catch (error) {
+      console.error('Delete invoice error:', error);
+      
+      const errorCode = error.response?.data?.errorCode;
+      const errorMsg = error.response?.data?.message;
+      
+      let userMessage = errorMsg || 'Không thể xóa hóa đơn. Vui lòng thử lại.';
+      
+      if (errorCode === 'INVALID_PAYLOAD') {
+        userMessage = '❌ Mã hóa đơn không hợp lệ.';
+      } else if (errorCode === 'NOT_FOUND') {
+        userMessage = '❌ Không tìm thấy hóa đơn.';
+      } else if (errorCode === 'FORBIDDEN') {
+        userMessage = '❌ Bạn không có quyền xóa hóa đơn này.';
+      } else if (errorCode === 'CANNOT_DELETE_PAID') {
+        userMessage = '❌ Không thể xóa hóa đơn đã thanh toán.';
+      } else if (errorCode === 'DELETE_FAILED') {
+        userMessage = '❌ Lỗi xóa hóa đơn. Vui lòng thử lại.';
+      }
+      
+      showToast(userMessage, false);
     }
   };
 

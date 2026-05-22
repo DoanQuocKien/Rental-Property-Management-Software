@@ -88,7 +88,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 
     if (contractID) {
       const contract = await db.getAsync(
-        `SELECT lc.electricity_price, lc.water_price 
+        `SELECT lc.id, lc.electricity_price, lc.water_price, lc.start_date
          FROM lease_contracts lc
          JOIN rooms r ON lc.room_id = r.id
          WHERE lc.id = ? AND r.landlord_id = ? AND lc.status = 'active'`,
@@ -96,6 +96,30 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
       );
 
       if (contract) {
+        // ──────────────────────────────────────────────────────
+        // Invoice Period Validation: Check if billing period >= contract start date
+        // ──────────────────────────────────────────────────────
+        const contractStartDate = new Date(contract.start_date);
+        const contractStartYear = contractStartDate.getFullYear();
+        const contractStartMonth = contractStartDate.getMonth() + 1;
+        
+        // Create a date from invoice year/month (first day of billing period)
+        const invoiceDate = new Date(invoiceYear, invoiceMonth - 1, 1);
+        
+        // If invoice period is before contract start, reject it
+        if (invoiceDate < new Date(contractStartYear, contractStartMonth - 1, 1)) {
+          return res.status(400).json({
+            status: 'error',
+            message: `Kỳ hóa đơn (Tháng ${invoiceMonth}/${invoiceYear}) không thể trước ngày khởi tạo hợp đồng (${contractStartDate.toLocaleDateString('vi-VN')}).`,
+            errorCode: 'BILLING_PERIOD_INVALID',
+            details: {
+              billingPeriod: `${invoiceMonth}/${invoiceYear}`,
+              contractStartDate: contract.start_date,
+              message: 'Vui lòng chọn kỳ hóa đơn bằng hoặc sau ngày khởi tạo hợp đồng.'
+            }
+          });
+        }
+
         // If electricity/water amounts not provided, they will be calculated based on readings
         // If provided, we sync the rates but amounts depend on actual consumption
         if (contract.electricity_price > 0) {
