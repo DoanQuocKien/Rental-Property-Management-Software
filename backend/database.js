@@ -67,9 +67,7 @@ db.closeAsync = () => new Promise((resolve, reject) => {
     }
     resolve();
   });
-});
-
-db.insertAuditLogAsync = (auditLog) => {
+});db.insertAuditLogAsync = (auditLog) => {
   const payloadText = auditLog.payload === undefined || auditLog.payload === null
     ? null
     : JSON.stringify(auditLog.payload);
