@@ -52,6 +52,7 @@ function auditMutations(targetTable) {
       userId: getUserId(req),
       landlordId: getUserId(req),
       action: method === 'PUT' ? 'UPDATE' : 'DELETE',
+      entityType: normalizedTargetTable,
       targetTable: normalizedTargetTable,
       targetId: req.params?.id ?? req.body?.id ?? null,
       path: req.originalUrl,

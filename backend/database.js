@@ -79,6 +79,7 @@ db.insertAuditLogAsync = (auditLog) => {
       user_id,
       landlord_id,
       action,
+      entity_type,
       target_table,
       target_id,
       path,
@@ -86,11 +87,12 @@ db.insertAuditLogAsync = (auditLog) => {
       payload,
       status_code,
       created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       auditLog.userId ?? null,
       auditLog.landlordId ?? null,
       auditLog.action,
+      auditLog.entityType ?? null,
       auditLog.targetTable,
       auditLog.targetId ?? null,
       auditLog.path,
