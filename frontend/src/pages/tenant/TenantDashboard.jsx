@@ -39,12 +39,17 @@ export default function TenantDashboard() {
     fetchAll();
   }, []);
 
-  // --- LOGIC TÍNH TOÁN ---
-  const unpaidInvoices = invoices.filter(i => i.status === 'unpaid');
+  // --- LOGIC TÍNH TOÁN (ĐÃ BỌC AN TOÀN ĐỂ KHÔNG BAO GIỜ CRASH) ---
+  const validContract = contract && contract.room_name ? contract : null;
+  const safeInvoices = Array.isArray(invoices) ? invoices : [];
+  const safeMaintenance = Array.isArray(maintenanceList) ? maintenanceList : [];
+
+  const unpaidInvoices = safeInvoices.filter(i => i.status === 'unpaid');
   const totalDebt = unpaidInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
-  const pendingMaintenance = maintenanceList.filter(m => m.status === 'pending' || m.status === 'in_progress');
-  const contractDaysLeft = contract
-    ? Math.max(0, Math.ceil((new Date(contract.end_date) - new Date()) / (1000 * 60 * 60 * 24)))
+  const pendingMaintenance = safeMaintenance.filter(m => m.status === 'pending' || m.status === 'in_progress');
+
+  const contractDaysLeft = validContract && validContract.end_date
+    ? Math.max(0, Math.ceil((new Date(validContract.end_date) - new Date()) / (1000 * 60 * 60 * 24)))
     : null;
 
   if (loading) return <div style={{ textAlign: 'center', padding: '100px', color: '#718096' }}>⏳ Đang tải dữ liệu...</div>;
@@ -63,19 +68,45 @@ export default function TenantDashboard() {
           </p>
           <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
             <span style={badgeStyle}><Icons.mail /> {user?.email}</span>
-            <span style={badgeStyle}><Icons.home /> Phòng: {contract ? contract.room_name : 'Chưa cập nhật'}</span>
+            <span style={badgeStyle}><Icons.home /> Phòng: {validContract ? validContract.room_name : 'Chưa xếp phòng'}</span>
           </div>
         </div>
         <div style={{ fontSize: '4rem', opacity: 0.1 }}><Icons.home /></div>
       </div>
 
-      {/* 2. CHỈ SỐ THỐNG KÊ (STATS GRID) */}
+      {/* CẢNH BÁO KHÁCH MỒ CÔI (Chỉ hiện khi chưa có phòng) */}
+      {!validContract && (
+        <div style={{
+          background: '#fffbeb',
+          borderLeft: '5px solid #d69e2e',
+          padding: '16px 20px',
+          borderRadius: '8px',
+          marginBottom: '24px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}>
+          <h4 style={{
+            margin: '0 0 8px 0',
+            fontSize: '1.05rem',
+            color: '#975a16',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            ⚠️ Tài khoản chưa được liên kết phòng
+          </h4>
+          <p style={{ margin: 0, lineHeight: 1.6, color: '#744210', fontSize: '0.95rem' }}>
+            Bạn chưa được Chủ trọ tạo hợp đồng giao phòng. Vui lòng liên hệ và đợi Chủ trọ hoàn tất thủ tục để các tính năng thống kê bên dưới được cập nhật.
+          </p>
+        </div>
+      )}
+
+      {/* 2. CHỈ SỐ THỐNG KÊ (VẪN HIỂN THỊ ĐỂ DEMO UX) */}
       <div style={statsGridStyle}>
         <div className="content-card" style={statCardStyle}>
           <div style={iconWrapperStyle('#e6fffa', '#38b2ac')}><Icons.home /></div>
           <div>
             <p style={labelStyle}>Phòng đang thuê</p>
-            <h4 style={valueStyle}>{contract ? contract.room_name : '---'}</h4>
+            <h4 style={valueStyle}>{validContract ? validContract.room_name : '---'}</h4>
           </div>
         </div>
 
@@ -113,14 +144,14 @@ export default function TenantDashboard() {
         </div>
       )}
 
-      {/* 4. CHI TIẾT PHỤ (BẢO TRÌ & HÓA ĐƠN) */}
+      {/* 4. CHI TIẾT PHỤ (BẢO TRÌ & HÓA ĐƠN) - VẪN GIỮ ĐỂ DEMO */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginTop: '24px' }}>
 
         {/* Cột trái: Tiến độ bảo trì */}
         <div className="content-card" style={{ padding: '24px' }}>
           <h3 style={sectionTitleStyle}><Icons.tool /> Yêu cầu sửa chữa gần đây</h3>
-          {maintenanceList.length > 0 ? (
-            maintenanceList.slice(0, 3).map(req => (
+          {pendingMaintenance.length > 0 ? (
+            pendingMaintenance.slice(0, 3).map(req => (
               <div key={req.id} style={maintenanceItemStyle}>
                 <div>
                   <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{req.category || 'Khác'}</div>
@@ -128,10 +159,10 @@ export default function TenantDashboard() {
                 </div>
                 <span style={{
                   fontSize: '0.7rem', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold',
-                  background: req.status === 'pending' ? '#fffaf0' : '#f0fff4',
-                  color: req.status === 'pending' ? '#d69e2e' : '#2d6a4f'
+                  background: '#fffaf0',
+                  color: '#d69e2e'
                 }}>
-                  {req.status === 'pending' ? 'Đang chờ' : 'Xong'}
+                  Đang chờ
                 </span>
               </div>
             ))
@@ -154,7 +185,7 @@ export default function TenantDashboard() {
                 </div>
               </div>
             ))
-          ) : <p style={emptyTextStyle}>Tất cả hóa đơn đã hoàn tất. 🎉</p>}
+          ) : <p style={emptyTextStyle}>Không còn hoá đơn nào cần thanh toán</p>}
         </div>
 
       </div>
@@ -163,25 +194,14 @@ export default function TenantDashboard() {
 }
 
 // --- HỆ THỐNG STYLES GỌN GÀNG ---
-const welcomeCardStyle = {
-  background: 'white', borderRadius: '20px', padding: '30px', display: 'flex', alignItems: 'center',
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '24px', border: '1px solid #edf2f7'
-};
-const badgeStyle = {
-  background: '#f7fafc', padding: '6px 12px', borderRadius: '12px', fontSize: '0.8rem',
-  color: '#4a5568', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px'
-};
+const welcomeCardStyle = { background: 'white', borderRadius: '20px', padding: '30px', display: 'flex', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '24px', border: '1px solid #edf2f7' };
+const badgeStyle = { background: '#f7fafc', padding: '6px 12px', borderRadius: '12px', fontSize: '0.8rem', color: '#4a5568', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' };
 const statsGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' };
 const statCardStyle = { padding: '20px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '15px' };
-const iconWrapperStyle = (bg, color) => ({
-  background: bg, color: color, padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center'
-});
+const iconWrapperStyle = (bg, color) => ({ background: bg, color: color, padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center' });
 const labelStyle = { fontSize: '0.8rem', color: '#718096', margin: 0 };
 const valueStyle = { fontSize: '1.2rem', fontWeight: '800', margin: '4px 0 0', color: '#2d3748' };
-const alertStyle = {
-  background: '#fffbeb', borderLeft: '5px solid #d69e2e', padding: '15px', borderRadius: '10px',
-  marginTop: '24px', color: '#744210', fontSize: '0.9rem'
-};
+const alertStyle = { background: '#fffbeb', borderLeft: '5px solid #d69e2e', padding: '15px', borderRadius: '10px', marginTop: '24px', color: '#744210', fontSize: '0.9rem' };
 const sectionTitleStyle = { fontSize: '1rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' };
 const maintenanceItemStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '10px', marginBottom: '10px' };
 const invoiceItemStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderBottom: '1px solid #f7fafc' };

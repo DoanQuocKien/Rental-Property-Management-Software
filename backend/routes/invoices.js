@@ -88,7 +88,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 
     if (contractID) {
       const contract = await db.getAsync(
-        `SELECT lc.electricity_price, lc.water_price 
+        `SELECT lc.id, lc.electricity_price, lc.water_price, lc.start_date
          FROM lease_contracts lc
          JOIN rooms r ON lc.room_id = r.id
          WHERE lc.id = ? AND r.landlord_id = ? AND lc.status = 'active'`,
@@ -96,6 +96,30 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
       );
 
       if (contract) {
+        // ──────────────────────────────────────────────────────
+        // Invoice Period Validation: Check if billing period >= contract start date
+        // ──────────────────────────────────────────────────────
+        const contractStartDate = new Date(contract.start_date);
+        const contractStartYear = contractStartDate.getFullYear();
+        const contractStartMonth = contractStartDate.getMonth() + 1;
+        
+        // Create a date from invoice year/month (first day of billing period)
+        const invoiceDate = new Date(invoiceYear, invoiceMonth - 1, 1);
+        
+        // If invoice period is before contract start, reject it
+        if (invoiceDate < new Date(contractStartYear, contractStartMonth - 1, 1)) {
+          return res.status(400).json({
+            status: 'error',
+            message: `Kỳ hóa đơn (Tháng ${invoiceMonth}/${invoiceYear}) không thể trước ngày khởi tạo hợp đồng (${contractStartDate.toLocaleDateString('vi-VN')}).`,
+            errorCode: 'BILLING_PERIOD_INVALID',
+            details: {
+              billingPeriod: `${invoiceMonth}/${invoiceYear}`,
+              contractStartDate: contract.start_date,
+              message: 'Vui lòng chọn kỳ hóa đơn bằng hoặc sau ngày khởi tạo hợp đồng.'
+            }
+          });
+        }
+
         // If electricity/water amounts not provided, they will be calculated based on readings
         // If provided, we sync the rates but amounts depend on actual consumption
         if (contract.electricity_price > 0) {
@@ -391,6 +415,7 @@ router.patch('/:id', authenticateToken, requireRole('landlord'), async (req, res
 
 // ──────────────────────────────────────────────────────────
 // DELETE /api/invoices/:id  — Xóa hóa đơn (landlord)
+// Resets electricity and water usage metrics to zero
 // ──────────────────────────────────────────────────────────
 router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
   const id = Number(req.params.id);
@@ -424,13 +449,14 @@ router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, re
     await db.runAsync('BEGIN TRANSACTION');
 
     try {
-      // Delete all meter readings for this room/month/year (cascade delete)
-      // Calculate the date range for the month
+      // Reset meter readings for this room/month/year to zero
+      // (keep the records but clear electricity and water indices)
       const monthStart = `${inv.year}-${String(inv.month).padStart(2, '0')}-01`;
       const monthEnd = new Date(inv.year, inv.month, 0).toISOString().slice(0, 10);
       
       await db.runAsync(
-        `DELETE FROM meter_readings 
+        `UPDATE meter_readings 
+         SET electricity_index = 0, water_index = 0, invoice_id = NULL
          WHERE room_id = ? AND recorded_date >= ? AND recorded_date <= ?`,
         [inv.room_id, monthStart, monthEnd]
       );
@@ -442,7 +468,7 @@ router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, re
 
       return res.json({
         status: 'success',
-        message: 'Xóa hóa đơn và chỉ số thành công.'
+        message: 'Xóa hóa đơn và đặt lại chỉ số thành công.'
       });
     } catch (txnErr) {
       await db.runAsync('ROLLBACK').catch(() => {});

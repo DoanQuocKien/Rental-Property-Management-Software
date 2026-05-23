@@ -303,6 +303,10 @@ db.serialize(() => {
   ensureColumn('notifications', 'message', 'TEXT NOT NULL');
   ensureColumn('notifications', 'is_read', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn('notifications', 'read_at', 'DATETIME');
+  ensureColumn('notifications', 'sender_id', 'INTEGER');
+  ensureColumn('notifications', 'room_id', 'INTEGER');
+  ensureColumn('notifications', 'content', 'TEXT');
+
 
   db.run(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -357,18 +361,35 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      sender_id INTEGER NOT NULL,
-      room_id INTEGER,
-      title TEXT NOT NULL,
-      content TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      landlord_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER,
+      description TEXT,
+      old_values TEXT,
+      new_values TEXT,
+      status TEXT DEFAULT 'success',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (sender_id) REFERENCES users(id),
-      FOREIGN KEY (room_id) REFERENCES rooms(id)
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (landlord_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
-  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_sender_id ON notifications(sender_id)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_room_id ON notifications(room_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_landlord_id ON audit_logs(landlord_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)');
+
+  ensureColumn('audit_logs', 'user_id', 'INTEGER NOT NULL');
+  ensureColumn('audit_logs', 'landlord_id', 'INTEGER NOT NULL');
+  ensureColumn('audit_logs', 'action', 'TEXT NOT NULL');
+  ensureColumn('audit_logs', 'entity_type', 'TEXT NOT NULL');
+  ensureColumn('audit_logs', 'entity_id', 'INTEGER');
+  ensureColumn('audit_logs', 'description', 'TEXT');
+  ensureColumn('audit_logs', 'old_values', 'TEXT');
+  ensureColumn('audit_logs', 'new_values', 'TEXT');
+  ensureColumn('audit_logs', 'status', "TEXT DEFAULT 'success'");
 
   if (!tokenCleanupInterval) {
     tokenCleanupInterval = setInterval(() => {
