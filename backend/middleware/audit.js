@@ -50,6 +50,7 @@ function auditMutations(targetTable) {
 
     const auditEntry = {
       userId: getUserId(req),
+      landlordId: getUserId(req),
       action: method === 'PUT' ? 'UPDATE' : 'DELETE',
       targetTable: normalizedTargetTable,
       targetId: req.params?.id ?? req.body?.id ?? null,
