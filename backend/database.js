@@ -145,6 +145,8 @@ db.serialize(() => {
 
   ensureColumn('lease_contracts', 'rental_price', 'REAL');
   ensureColumn('lease_contracts', 'status', "TEXT DEFAULT 'active'");
+  ensureColumn('lease_contracts', 'electricity_price', 'REAL DEFAULT 0');
+  ensureColumn('lease_contracts', 'water_price', 'REAL DEFAULT 0');
 
   db.run(`
     CREATE TABLE IF NOT EXISTS meter_readings (
@@ -240,6 +242,40 @@ db.serialize(() => {
   ensureColumn('maintenance_requests', 'assigned_to', 'INTEGER');
   ensureColumn('maintenance_requests', 'resolution_note', 'TEXT');
   ensureColumn('maintenance_requests', 'issue_photo', 'TEXT');
+  ensureColumn('maintenance_requests', 'cost', 'REAL DEFAULT 0');
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user_id INTEGER NOT NULL,
+      recipient_type TEXT NOT NULL DEFAULT 'all_tenants',
+      recipient_id INTEGER,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      read_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_from_user_id ON notifications(from_user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_recipient_type ON notifications(recipient_type)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)');
+
+  ensureColumn('notifications', 'from_user_id', 'INTEGER NOT NULL');
+  ensureColumn('notifications', 'recipient_type', "TEXT NOT NULL DEFAULT 'all_tenants'");
+  ensureColumn('notifications', 'recipient_id', 'INTEGER');
+  ensureColumn('notifications', 'title', 'TEXT NOT NULL');
+  ensureColumn('notifications', 'message', 'TEXT NOT NULL');
+  ensureColumn('notifications', 'is_read', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('notifications', 'read_at', 'DATETIME');
+  ensureColumn('notifications', 'sender_id', 'INTEGER');
+  ensureColumn('notifications', 'room_id', 'INTEGER');
+  ensureColumn('notifications', 'content', 'TEXT');
+
 
   db.run(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -271,6 +307,39 @@ db.serialize(() => {
   `);
 
   db.run('CREATE INDEX IF NOT EXISTS idx_revoked_access_expires_at ON revoked_access_tokens(expires_at)');
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      landlord_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER,
+      description TEXT,
+      old_values TEXT,
+      new_values TEXT,
+      status TEXT DEFAULT 'success',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (landlord_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_landlord_id ON audit_logs(landlord_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)');
+
+  ensureColumn('audit_logs', 'user_id', 'INTEGER NOT NULL');
+  ensureColumn('audit_logs', 'landlord_id', 'INTEGER NOT NULL');
+  ensureColumn('audit_logs', 'action', 'TEXT NOT NULL');
+  ensureColumn('audit_logs', 'entity_type', 'TEXT NOT NULL');
+  ensureColumn('audit_logs', 'entity_id', 'INTEGER');
+  ensureColumn('audit_logs', 'description', 'TEXT');
+  ensureColumn('audit_logs', 'old_values', 'TEXT');
+  ensureColumn('audit_logs', 'new_values', 'TEXT');
+  ensureColumn('audit_logs', 'status', "TEXT DEFAULT 'success'");
 
   if (!tokenCleanupInterval) {
     tokenCleanupInterval = setInterval(() => {
@@ -343,7 +412,7 @@ db.serialize(() => {
         await db.runAsync('COMMIT');
         console.log(`Seeded demo rooms for ${landlords.length} landlord account(s).`);
       } catch (seedError) {
-        await db.runAsync('ROLLBACK').catch(() => {});
+        await db.runAsync('ROLLBACK').catch(() => { });
         throw seedError;
       }
     } catch (seedError) {

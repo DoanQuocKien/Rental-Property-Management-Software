@@ -114,7 +114,7 @@ function authConfigGuard(req, res) {
     getJwtRefreshSecret();
     return true;
   } catch (err) {
-    res.status(500).json({ error: 'Server auth configuration is invalid' });
+    res.status(500).json({ error: 'Cấu hình xác thực máy chủ không hợp lệ' });
     return false;
   }
 }
@@ -134,30 +134,30 @@ router.post('/register', async (req, res) => {
   const normalizedEmail = normalizeEmail(email);
 
   if (!safeName || !safeFullName || !normalizedEmail || !password) {
-    return res.status(400).json({ error: 'Name, email and password are required' });
+    return res.status(400).json({ error: 'Tên, email và mật khẩu là bắt buộc' });
   }
 
   if (safeName.length < 2 || safeName.length > 100) {
-    return res.status(400).json({ error: 'Name must be between 2 and 100 characters' });
+    return res.status(400).json({ error: 'Tên phải từ 2 đến 100 ký tự' });
   }
 
   if (!validateEmail(normalizedEmail)) {
-    return res.status(400).json({ error: 'Email format is invalid' });
+    return res.status(400).json({ error: 'Định dạng email không hợp lệ' });
   }
 
   if (safePhoneNumber && !/^\+?[0-9]{8,15}$/.test(safePhoneNumber)) {
-    return res.status(400).json({ error: 'Phone number format is invalid' });
+    return res.status(400).json({ error: 'Định dạng số điện thoại không hợp lệ' });
   }
 
   if (!isStrongPassword(password)) {
-    return res.status(400).json({ error: 'Password must be 8-72 chars and include letters and numbers' });
+    return res.status(400).json({ error: 'Mật khẩu phải 8-72 ký tự và chứa chữ và số' });
   }
 
   const allowedRoles = ['landlord', 'tenant', 'Owner', 'Manager', 'Tenant', 'TechnicalStaff'];
   const userRole = allowedRoles.includes(role) ? role : 'tenant';
 
   if ((userRole === 'tenant' || userRole === 'Tenant') && safeCitizenId && safeCitizenId.length > 20) {
-    return res.status(400).json({ error: 'Citizen ID must not exceed 20 characters' });
+    return res.status(400).json({ error: 'CCCD/CMND không được vượt quá 20 ký tự' });
   }
 
   try {
@@ -204,16 +204,16 @@ router.post('/register', async (req, res) => {
     const { token, refreshToken } = await issueTokens(user);
 
     res.status(201).json({
-      message: 'Registration successful',
+      message: 'Đăng ký thành công',
       token,
       refreshToken,
       user,
     });
   } catch (err) {
     if (err.message && err.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'Email already registered' });
+      return res.status(409).json({ error: 'Email đã được đăng ký' });
     }
-    return res.status(500).json({ error: 'Registration failed' });
+    return res.status(500).json({ error: 'Đăng ký thất bại' });
   }
 });
 
@@ -227,14 +227,14 @@ router.post('/login', async (req, res) => {
   const normalizedEmail = normalizeEmail(email);
 
   if (!normalizedEmail || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+    return res.status(400).json({ error: 'Email và mật khẩu là bắt buộc' });
   }
 
   if (!validateEmail(normalizedEmail)) {
-    return res.status(400).json({ error: 'Email format is invalid' });
+    return res.status(400).json({ error: 'Định dạng email không hợp lệ' });
   }
 
-    try {
+  try {
     const user = await db.getAsync(
       `SELECT id, name, full_name, phone_number, citizen_id, permanent_address, email, password, role, status
        FROM users
@@ -243,7 +243,7 @@ router.post('/login', async (req, res) => {
     );
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không đúng' });
     }
 
     if (user.status === 'pending') {
@@ -256,7 +256,7 @@ router.post('/login', async (req, res) => {
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không đúng' });
     }
 
     const safeUser = toPublicUser(user);
@@ -264,13 +264,13 @@ router.post('/login', async (req, res) => {
     const { token, refreshToken } = await issueTokens(safeUser);
 
     return res.json({
-      message: 'Login successful',
+      message: 'Đăng nhập thành công',
       token,
       refreshToken,
       user: safeUser,
     });
   } catch (err) {
-    return res.status(500).json({ error: 'Login failed' });
+    return res.status(500).json({ error: 'Đăng nhập thất bại' });
   }
 });
 
@@ -289,11 +289,11 @@ router.post('/refresh', async (req, res) => {
   try {
     decoded = jwt.verify(refreshToken, getJwtRefreshSecret());
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    return res.status(401).json({ error: 'Refresh token không hợp lệ hoặc đã hết hạn' });
   }
 
   if (decoded.type !== 'refresh') {
-    return res.status(401).json({ error: 'Invalid refresh token type' });
+    return res.status(401).json({ error: 'Loại refresh token không hợp lệ' });
   }
 
   const currentTokenHash = hashToken(refreshToken);
@@ -306,7 +306,7 @@ router.post('/refresh', async (req, res) => {
     );
 
     if (!tokenRow) {
-      return res.status(401).json({ error: 'Refresh token has been revoked' });
+      return res.status(401).json({ error: 'Refresh token đã bị thu hồi' });
     }
 
     if (new Date(tokenRow.expires_at) <= new Date()) {
@@ -314,7 +314,7 @@ router.post('/refresh', async (req, res) => {
         'UPDATE refresh_tokens SET revoked = 1, revoked_at = CURRENT_TIMESTAMP WHERE id = ?',
         [tokenRow.id]
       );
-      return res.status(401).json({ error: 'Refresh token has expired' });
+      return res.status(401).json({ error: 'Refresh token đã hết hạn' });
     }
 
     const user = await db.getAsync(
@@ -325,7 +325,7 @@ router.post('/refresh', async (req, res) => {
     );
 
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'Không tìm thấy người dùng' });
     }
     
     if (user.status === 'pending' || user.status === 'inactive') {
@@ -351,13 +351,13 @@ router.post('/refresh', async (req, res) => {
     await saveRefreshToken(user.id, newRefreshToken, newRefreshJti);
 
     return res.json({
-      message: 'Token refreshed successfully',
+      message: 'Làm mới token thành công',
       token: newToken,
       refreshToken: newRefreshToken,
       user: toPublicUser(user),
     });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to refresh token' });
+    return res.status(500).json({ error: 'Lỗi làm mới token' });
   }
 });
 
@@ -385,9 +385,9 @@ router.post('/logout', authenticateToken, async (req, res) => {
       );
     }
 
-    return res.json({ message: 'Logout successful' });
+    return res.json({ message: 'Đăng xuất thành công' });
   } catch (err) {
-    return res.status(500).json({ error: 'Logout failed' });
+    return res.status(500).json({ error: 'Đăng xuất thất bại' });
   }
 });
 
@@ -396,15 +396,15 @@ router.put('/change-password', authenticateToken, async (req, res) => {
   const { current_password, new_password, confirm_password } = req.body || {};
 
   if (!current_password || !new_password || !confirm_password) {
-    return res.status(400).json({ error: 'Current password, new password and confirm password are required' });
+    return res.status(400).json({ error: 'Mật khẩu hiện tại, mật khẩu mới và xác nhận mật khẩu là bắt buộc' });
   }
 
   if (new_password !== confirm_password) {
-    return res.status(400).json({ error: 'Password confirmation does not match' });
+    return res.status(400).json({ error: 'Mật khẩu xác nhận không khớp' });
   }
 
   if (new_password.length < 8) {
-    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    return res.status(400).json({ error: 'Mật khẩu mới phải ít nhất 8 ký tự' });
   }
 
   try {
@@ -416,16 +416,16 @@ router.put('/change-password', authenticateToken, async (req, res) => {
     );
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
     }
 
     const isCurrentPasswordValid = await bcrypt.compare(current_password, user.password);
     if (!isCurrentPasswordValid) {
-      return res.status(400).json({ error: 'Current password is incorrect' });
+      return res.status(400).json({ error: 'Mật khẩu hiện tại không đúng' });
     }
 
     if (await bcrypt.compare(new_password, user.password)) {
-      return res.status(400).json({ error: 'New password must be different from current password' });
+      return res.status(400).json({ error: 'Mật khẩu mới phải khác với mật khẩu hiện tại' });
     }
 
     const hashedPassword = await bcrypt.hash(new_password, 10);
@@ -437,10 +437,10 @@ router.put('/change-password', authenticateToken, async (req, res) => {
       [hashedPassword, req.user.id]
     );
 
-    return res.json({ message: 'Password changed successfully' });
+    return res.json({ message: 'Đổi mật khẩu thành công' });
   } catch (err) {
     console.error('Change password error:', err);
-    return res.status(500).json({ error: 'Failed to change password' });
+    return res.status(500).json({ error: 'Lỗi đổi mật khẩu' });
   }
 });
 

@@ -70,7 +70,7 @@ router.post('/seed-demo', authenticateToken, requireRole('landlord'), async (req
 
     if (roomsToInsert.length === 0) {
       return res.status(200).json({
-        message: 'Demo rooms already exist.',
+        message: 'Phòng demo đã tồn tại.',
         createdCount: 0,
       });
     }
@@ -100,7 +100,7 @@ router.post('/seed-demo', authenticateToken, requireRole('landlord'), async (req
   } catch (error) {
     console.error('Seed demo rooms error:', error);
     return res.status(500).json({
-      error: 'Failed to create demo rooms',
+      error: 'Có lỗi khi tạo phòng demo.',
     });
   }
 });
@@ -116,7 +116,7 @@ router.get('/available', authenticateToken, requireRole('landlord'), (req, res) 
     [req.user.id],
     (err, rooms) => {
       if (err) {
-        return res.status(500).json({ error: 'Failed to fetch available rooms' });
+        return res.status(500).json({ error: 'Có lỗi khi tải phòng có sẵn.' });
       }
       res.json({ rooms: rooms.map(mapRoomRecord) });
     }
@@ -149,22 +149,22 @@ router.get('/', authenticateToken, requireRole('landlord'), (req, res) => {
 
   db.all(query, params, (err, rooms) => {
     if (err) {
-      return res.status(500).json({ error: 'Failed to fetch rooms' });
+      return res.status(500).json({ error: 'Có lỗi khi tải phòng.' });
     }
     res.json({ rooms: rooms.map(mapRoomRecord) });
   });
 });
 
 // US3: Add a room
-router.post('/', authenticateToken, requireRole('landlord'), (req, res) => {
+router.post('/', authenticateToken, requireRole('landlord'), async (req, res) => {
   const { name, description, price, area, status, category, maxOccupants } = req.body;
 
   if (!name || price === undefined || price === null) {
-    return res.status(400).json({ error: 'Room name and price are required' });
+    return res.status(400).json({ error: 'Tên phòng và giá phòng là bắt buộc!' });
   }
 
   if (price < 0) {
-    return res.status(400).json({ error: 'Price must be a positive number' });
+    return res.status(400).json({ error: 'Giá phòng phải là một số dương!' });
   }
 
   const normalizedStatus = String(status || '').trim().toLowerCase();
@@ -173,123 +173,175 @@ router.post('/', authenticateToken, requireRole('landlord'), (req, res) => {
   const parsedMaxOccupants = maxOccupants !== undefined ? Number(maxOccupants) : Number(req.body.capacity);
   const roomMaxOccupants = Number.isFinite(parsedMaxOccupants) && parsedMaxOccupants > 0 ? parsedMaxOccupants : 1;
 
-  db.run(
-    `INSERT INTO rooms (name, description, category, price, area, max_occupants, status, landlord_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [name, description || '', roomCategory, price, area || null, roomMaxOccupants, roomStatus, req.user.id],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to add room' });
-      }
+  try {
+    // Check if room name is already used by this landlord
+    const existingRoom = await db.getAsync(
+      'SELECT id FROM rooms WHERE name = ? AND landlord_id = ?',
+      [name, req.user.id]
+    );
 
-      db.get('SELECT * FROM rooms WHERE id = ?', [this.lastID], (err, room) => {
-        if (err) {
-          return res.status(500).json({ error: 'Room created but failed to retrieve' });
-        }
-        res.status(201).json({ message: 'Room added successfully', room: mapRoomRecord(room) });
-      });
+    if (existingRoom) {
+      return res.status(400).json({ error: 'Tên phòng đã tồn tại, vui lòng nhập tên phòng khác!' });
     }
-  );
+
+    const result = await db.runAsync(
+      `INSERT INTO rooms (name, description, category, price, area, max_occupants, status, landlord_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, description || '', roomCategory, price, area || null, roomMaxOccupants, roomStatus, req.user.id]
+    );
+
+    const room = await db.getAsync('SELECT * FROM rooms WHERE id = ?', [result.lastID]);
+    res.status(201).json({ message: 'Thêm phòng thành công!', room: mapRoomRecord(room) });
+  } catch (err) {
+    console.error('Add room error:', err);
+    return res.status(500).json({ error: 'Thêm phòng thất bại!' });
+  }
 });
 
 // US3: Update a room
-router.put('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
+router.put('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
   const roomId = req.params.id;
   const { name, description, price, area, status, category, maxOccupants } = req.body;
 
-  db.get(
-    'SELECT * FROM rooms WHERE id = ? AND landlord_id = ?',
-    [roomId, req.user.id],
-    (err, room) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to find room' });
-      }
-      if (!room) {
-        return res.status(404).json({ error: 'Room not found' });
-      }
+  try {
+    const room = await db.getAsync(
+      'SELECT * FROM rooms WHERE id = ? AND landlord_id = ?',
+      [roomId, req.user.id]
+    );
 
-      const updatedName = name !== undefined ? name : room.name;
-      const updatedDescription = description !== undefined ? description : room.description;
-      const updatedPrice = price !== undefined ? price : room.price;
-      const updatedArea = area !== undefined ? area : room.area;
-      const updatedStatusCandidate = status !== undefined ? String(status).trim().toLowerCase() : room.status;
-      const updatedStatus = VALID_ROOM_STATUSES.includes(updatedStatusCandidate)
-        ? updatedStatusCandidate
-        : room.status;
-      const updatedCategory = category !== undefined
-        ? (String(category).trim() || 'Standard')
-        : (room.category || 'Standard');
-      const rawMaxOccupants = maxOccupants !== undefined ? maxOccupants : req.body.capacity;
-      const updatedMaxOccupants = rawMaxOccupants !== undefined
-        ? Number(rawMaxOccupants)
-        : (room.max_occupants || 1);
-
-      if (!updatedName) {
-        return res.status(400).json({ error: 'Room name cannot be empty' });
-      }
-
-      if (updatedPrice < 0) {
-        return res.status(400).json({ error: 'Price must be a positive number' });
-      }
-
-      if (!Number.isFinite(updatedMaxOccupants) || updatedMaxOccupants < 1) {
-        return res.status(400).json({ error: 'Max occupants must be a positive number' });
-      }
-
-      db.run(
-        `UPDATE rooms SET name = ?, description = ?, category = ?, price = ?, area = ?, max_occupants = ?, status = ?,
-         updated_at = CURRENT_TIMESTAMP WHERE id = ? AND landlord_id = ?`,
-        [
-          updatedName,
-          updatedDescription,
-          updatedCategory,
-          updatedPrice,
-          updatedArea,
-          updatedMaxOccupants,
-          updatedStatus,
-          roomId,
-          req.user.id,
-        ],
-        function (err) {
-          if (err) {
-            return res.status(500).json({ error: 'Failed to update room' });
-          }
-
-          db.get('SELECT * FROM rooms WHERE id = ?', [roomId], (err, updatedRoom) => {
-            if (err) {
-              return res.status(500).json({ error: 'Room updated but failed to retrieve' });
-            }
-            res.json({ message: 'Room updated successfully', room: mapRoomRecord(updatedRoom) });
-          });
-        }
-      );
+    if (!room) {
+      return res.status(404).json({ error: 'Không tìm thấy phòng!' });
     }
-  );
+
+    const updatedName = name !== undefined ? name : room.name;
+    const updatedDescription = description !== undefined ? description : room.description;
+    const updatedPrice = price !== undefined ? price : room.price;
+    const updatedArea = area !== undefined ? area : room.area;
+    const updatedStatusCandidate = status !== undefined ? String(status).trim().toLowerCase() : room.status;
+    const updatedStatus = VALID_ROOM_STATUSES.includes(updatedStatusCandidate)
+      ? updatedStatusCandidate
+      : room.status;
+    const updatedCategory = category !== undefined
+      ? (String(category).trim() || 'Standard')
+      : (room.category || 'Standard');
+    const rawMaxOccupants = maxOccupants !== undefined ? maxOccupants : req.body.capacity;
+    const updatedMaxOccupants = rawMaxOccupants !== undefined
+      ? Number(rawMaxOccupants)
+      : (room.max_occupants || 1);
+
+    if (!updatedName) {
+      return res.status(400).json({ error: 'Tên phòng không được để trống' });
+    }
+
+    if (updatedPrice < 0) {
+      return res.status(400).json({ error: 'Giá phòng phải là một số dương' });
+    }
+
+    if (!Number.isFinite(updatedMaxOccupants) || updatedMaxOccupants < 1) {
+      return res.status(400).json({ error: 'Số lượng người ở tối đa phải là một số dương' });
+    }
+
+    // Check if new room name is already used by this landlord (if name is being changed)
+    if (updatedName !== room.name) {
+      const existingRoom = await db.getAsync(
+        'SELECT id FROM rooms WHERE name = ? AND landlord_id = ? AND id != ?',
+        [updatedName, req.user.id, roomId]
+      );
+
+      if (existingRoom) {
+        return res.status(400).json({ error: 'Tên phòng đã tồn tại, vui lòng nhập tên phòng khác!' });
+      }
+    }
+
+    await db.runAsync(
+      `UPDATE rooms SET name = ?, description = ?, category = ?, price = ?, area = ?, max_occupants = ?, status = ?,
+       updated_at = CURRENT_TIMESTAMP WHERE id = ? AND landlord_id = ?`,
+      [
+        updatedName,
+        updatedDescription,
+        updatedCategory,
+        updatedPrice,
+        updatedArea,
+        updatedMaxOccupants,
+        updatedStatus,
+        roomId,
+        req.user.id,
+      ]
+    );
+
+    const updatedRoom = await db.getAsync('SELECT * FROM rooms WHERE id = ?', [roomId]);
+    res.json({ message: 'Cập nhật phòng thành công!', room: mapRoomRecord(updatedRoom) });
+  } catch (err) {
+    console.error('Update room error:', err);
+    return res.status(500).json({ error: 'Cập nhật phòng thất bại!' });
+  }
 });
 
 // US3: Delete a room
-router.delete('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
+router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
   const roomId = req.params.id;
 
-  db.get(
-    'SELECT * FROM rooms WHERE id = ? AND landlord_id = ?',
-    [roomId, req.user.id],
-    (err, room) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to find room' });
-      }
-      if (!room) {
-        return res.status(404).json({ error: 'Room not found' });
-      }
-
-      db.run('DELETE FROM rooms WHERE id = ? AND landlord_id = ?', [roomId, req.user.id], function (err) {
-        if (err) {
-          return res.status(500).json({ error: 'Failed to delete room' });
-        }
-        res.json({ message: 'Room deleted successfully' });
-      });
+  try {
+    // Verify room exists and belongs to landlord
+    const room = await db.getAsync(
+      'SELECT * FROM rooms WHERE id = ? AND landlord_id = ?',
+      [roomId, req.user.id]
+    );
+    
+    if (!room) {
+      return res.status(404).json({ error: 'Phòng không tồn tại!' });
     }
-  );
+
+    // Start transaction for cascade deletion
+    await db.runAsync('BEGIN TRANSACTION');
+
+    // Delete associated invoices first (cascade delete)
+    const invoices = await db.allAsync(
+      'SELECT id FROM invoices WHERE room_id = ?',
+      [roomId]
+    );
+
+    for (const invoice of invoices) {
+      // Delete meter readings associated with this invoice
+      await db.runAsync(
+        'DELETE FROM meter_readings WHERE invoice_id = ?',
+        [invoice.id]
+      );
+    }
+
+    // Delete all invoices for this room
+    await db.runAsync(
+      'DELETE FROM invoices WHERE room_id = ?',
+      [roomId]
+    );
+
+    // Delete meter readings not linked to invoices
+    await db.runAsync(
+      'DELETE FROM meter_readings WHERE room_id = ?',
+      [roomId]
+    );
+
+    // Delete the room itself
+    await db.runAsync(
+      'DELETE FROM rooms WHERE id = ? AND landlord_id = ?',
+      [roomId, req.user.id]
+    );
+
+    await db.runAsync('COMMIT');
+
+    const successMessage = invoices.length > 0 
+      ? `✅ Xóa phòng thành công! Đã xóa ${invoices.length} hóa đơn liên quan để giữ dữ liệu sạch sẽ.`
+      : '✅ Xóa phòng thành công!';
+
+    return res.json({ 
+      message: successMessage,
+      deletedInvoicesCount: invoices.length 
+    });
+  } catch (err) {
+    await db.runAsync('ROLLBACK').catch(() => {});
+    console.error('Delete room error:', err);
+    return res.status(500).json({ error: 'Xóa phòng thất bại!' });
+  }
 });
 
 module.exports = router;

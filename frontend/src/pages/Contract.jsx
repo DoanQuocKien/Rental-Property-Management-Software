@@ -195,7 +195,7 @@ export default function Contract() {
     room_id: '',
     tenant_id: '',
     rental_price: '',
-    deposit: '',
+    deposit: '0',
     electricity_price: '',
     water_price: '',
     start_date: today,

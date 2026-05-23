@@ -185,6 +185,7 @@ export default function TenantProfile() {
                   value={form?.date_of_birth ? form.date_of_birth.substring(0, 10) : ''}
                   onChange={e => setForm({...form, date_of_birth: e.target.value})}
                   disabled={!editMode}
+                  required
                 />
               </div>
 

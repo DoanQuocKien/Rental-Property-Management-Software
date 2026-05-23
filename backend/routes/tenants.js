@@ -28,6 +28,45 @@ router.get('/', authenticateToken, requireRole('landlord'), (req, res) => {
   );
 });
 
+// ───────────────────────────────────────────────────────────────
+// GET /api/tenants/account-list — Danh sách tài khoản người thuê
+// (Chỉ lấy những người thuê có hợp đồng hoạt động với landlord)
+// ───────────────────────────────────────────────────────────────
+router.get('/account-list', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const tenants = await db.allAsync(
+      `SELECT DISTINCT
+         u.id,
+         COALESCE(u.full_name, u.name) AS name,
+         u.email,
+         u.phone_number AS phone,
+         u.citizen_id,
+         COUNT(lc.id) AS active_contracts,
+         GROUP_CONCAT(r.name) AS room_names
+       FROM users u
+       JOIN lease_contracts lc ON u.id = lc.tenant_id
+       JOIN rooms r ON lc.room_id = r.id
+       WHERE r.landlord_id = ? AND lc.status = 'active'
+       GROUP BY u.id
+       ORDER BY u.name ASC`,
+      [req.user.id]
+    );
+
+    return res.json({
+      status: 'success',
+      data: tenants || [],
+      count: tenants?.length || 0
+    });
+  } catch (err) {
+    console.error('Get account list error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi tải danh sách tài khoản.',
+      errorCode: 'FETCH_FAILED'
+    });
+  }
+});
+
 // POST /api/tenants - Thêm mới khách thuê
 router.post('/', authenticateToken, requireRole('landlord'), async (req, res) => {
   const { name, email, password, phone, citizen_id, permanent_address, date_of_birth, gender } = req.body;
@@ -58,7 +97,13 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 });
 
 // GET /api/tenants/profile - Lấy thông tin cá nhân người thuê
-router.get('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
+router.get('/profile', authenticateToken, (req, res) => {
+  // Allow both tenants and landlords to get their profile
+  const allowedRoles = ['tenant', 'landlord', 'Tenant', 'Landlord'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   db.get('SELECT id, name, email, phone, citizen_id, permanent_address, date_of_birth, gender, created_at FROM users WHERE id = ?',
     [req.user.id],
     (err, user) => {
@@ -69,8 +114,14 @@ router.get('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
   );
 });
 
-// PUT /api/tenants/profile - Cập nhật thông tin cá nhân
-router.put('/profile', authenticateToken, requireRole('tenant'), (req, res) => {
+// PUT /api/tenants/profile - Cập nhật thông tin cá nhân (for both tenants and landlords)
+router.put('/profile', authenticateToken, (req, res) => {
+  // Allow both tenants and landlords to update their profile
+  const allowedRoles = ['tenant', 'landlord', 'Tenant', 'Landlord'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   const { name, phone, citizen_id, permanent_address, date_of_birth, gender } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Tên không được để trống' });
