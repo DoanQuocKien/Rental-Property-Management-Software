@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { auditMutations } = require('../middleware/audit');
 
 const router = express.Router();
 const VALID_ROOM_STATUSES = ['available', 'occupied', 'maintenance', 'reserved', 'cleaning'];
@@ -199,7 +200,7 @@ router.post('/', authenticateToken, requireRole('landlord'), async (req, res) =>
 });
 
 // US3: Update a room
-router.put('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
+router.put('/:id', authenticateToken, auditMutations('rooms'), requireRole('landlord'), async (req, res) => {
   const roomId = req.params.id;
   const { name, description, price, area, status, category, maxOccupants } = req.body;
 
@@ -278,7 +279,7 @@ router.put('/:id', authenticateToken, requireRole('landlord'), async (req, res) 
 });
 
 // US3: Delete a room
-router.delete('/:id', authenticateToken, requireRole('landlord'), async (req, res) => {
+router.delete('/:id', authenticateToken, auditMutations('rooms'), requireRole('landlord'), async (req, res) => {
   const roomId = req.params.id;
 
   try {
