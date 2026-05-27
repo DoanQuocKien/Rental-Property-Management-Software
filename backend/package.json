@@ -4,7 +4,7 @@
   "description": "Rental Property Management Software - Backend",
   "main": "server.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.17"
   },
   "scripts": {
     "start": "node server.js",

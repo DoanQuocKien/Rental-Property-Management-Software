@@ -67,3 +67,4 @@ docker compose up --build
 - If backend refuses to start, verify `backend/.env` has `JWT_SECRET`.
 - If ports are busy, change `PORT` for backend or pass another Vite port.
 - If dependencies are missing, rerun `npm run install:all`.
+- On Render, if SQLite fails with `GLIBC_2.38 not found`, clear the Render build cache and redeploy. The backend includes `.npmrc` with `build-from-source=true` so `sqlite3` is compiled against Render's Linux image instead of using an incompatible prebuilt binary.
