@@ -23,9 +23,7 @@ function AccountTab({ form, onChange }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(false);
-    setSuccess('Đã lưu thông tin tài khoản thành công!');
-    setTimeout(() => setSuccess(''), 3000);
+    setSaving(true);
     setError('');
     setSuccess('');
     try {
@@ -461,7 +459,7 @@ function ServiceTab({ form, onChange, onBulkUpdate }) {
       await api.put('/landlord/settings', form);
       setSuccess('Đã lưu cấu hình dịch vụ thành công!');
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
+    } catch {
       setError('Lỗi khi lưu cấu hình. Vui lòng thử lại.');
     } finally {
       setSaving(false);
@@ -576,6 +574,10 @@ export default function Settings() {
     notice_days: savedProperty.notice_days || '30',
   });
 
+  const [securityForm, setSecurityForm] = useState({
+    twoFactor: false,
+    loginNotif: true,
+  });
 
   // State mới cho tab Cấu hình dịch vụ (Sprint 5)
   const [serviceForm, setServiceForm] = useState({

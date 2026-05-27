@@ -1,72 +1,98 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-
-// --- 1. IMPORT CÁC TRANG XÁC THỰC ---
-import Login from './pages/Login';
-import Register from './pages/Register';
-
-// --- 2. IMPORT TRANG CHỦ TRỌ (LANDLORD) ---
-import Overview from './pages/Overview';
-import LandlordDashboard from './pages/LandlordDashboard';
-import Tenants from './pages/Tenants';
-import Invoices from './pages/Invoices';
-import Settings from './pages/Settings';
-import Contract from './pages/Contract';
-import ContractDetail from './pages/ContractDetail';
-import ManagerMeterReading from './pages/ManagerMeterReading';
-import ManagerMaintenance from './pages/ManagerMaintenance';
-import TenantApproval from './pages/TenantApproval';
-import FinancialDashboard from './pages/FinancialDashboard';
-import NotificationSystem from './pages/NotificationSystem';
-
-// --- 3. IMPORT TRANG NGƯỜI THUÊ (TENANT) ---
-import TenantDashboard from './pages/tenant/TenantDashboard';
-import TenantInvoices from './pages/tenant/TenantInvoices';
-import TenantContract from './pages/tenant/TenantContract';
-import TenantMaintenance from './pages/tenant/TenantMaintenance';
-import TenantProfile from './pages/tenant/TenantProfile';
-import MockPayment from './pages/MockPayment';
-
-// --- 4. THÀNH PHẦN HỖ TRỢ ---
 import MainLayout from './components/layout/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const MockPayment = lazy(() => import('./pages/MockPayment'));
+
+const Overview = lazy(() => import('./pages/Overview'));
+const LandlordDashboard = lazy(() => import('./pages/LandlordDashboard'));
+const Tenants = lazy(() => import('./pages/Tenants'));
+const Invoices = lazy(() => import('./pages/Invoices'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Contract = lazy(() => import('./pages/Contract'));
+const ContractDetail = lazy(() => import('./pages/ContractDetail'));
+const ManagerMeterReading = lazy(() => import('./pages/ManagerMeterReading'));
+const ManagerMaintenance = lazy(() => import('./pages/ManagerMaintenance'));
+const TenantApproval = lazy(() => import('./pages/TenantApproval'));
+const FinancialDashboard = lazy(() => import('./pages/FinancialDashboard'));
+const NotificationSystem = lazy(() => import('./pages/NotificationSystem'));
+
+const TenantDashboard = lazy(() => import('./pages/tenant/TenantDashboard'));
+const TenantInvoices = lazy(() => import('./pages/tenant/TenantInvoices'));
+const TenantContract = lazy(() => import('./pages/tenant/TenantContract'));
+const TenantMaintenance = lazy(() => import('./pages/tenant/TenantMaintenance'));
+const TenantProfile = lazy(() => import('./pages/tenant/TenantProfile'));
+
+function RouteFallback() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#64748b' }}>
+      Loading...
+    </div>
+  );
+}
+
+function LandlordPage({ title, children }) {
+  return (
+    <ProtectedRoute role="landlord">
+      <MainLayout title={title}>{children}</MainLayout>
+    </ProtectedRoute>
+  );
+}
+
+function TenantPage({ title, children }) {
+  return (
+    <ProtectedRoute role="tenant">
+      <MainLayout title={title}>{children}</MainLayout>
+    </ProtectedRoute>
+  );
+}
+
 function App() {
   const { user } = useAuth();
+  const homePath = user?.role === 'landlord' ? '/landlord' : '/tenant';
 
   return (
-    <Routes>
-      {/* KHÔNG DÙNG LAYOUT: TRANG LOGIN/REGISTER */}
-      <Route path="/login" element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Login />}/>
-      <Route path="/register" element={user ? <Navigate to={user.role === 'landlord' ? '/landlord' : '/tenant'} replace /> : <Register />}/>
-      <Route path="/mock-payment" element={<MockPayment />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to={homePath} replace /> : <Login />} />
+        <Route path="/register" element={user ? <Navigate to={homePath} replace /> : <Register />} />
+        <Route path="/mock-payment" element={<MockPayment />} />
 
-      {/* NHÓM 1: CÁC TUYẾN ĐƯỜNG CHO CHỦ TRỌ (LANDLORD) */}
-      <Route path="/landlord" element={<ProtectedRoute role="landlord"><MainLayout title="Tổng quan hệ thống"><Overview /></MainLayout></ProtectedRoute>} />
-      <Route path="/rooms" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý phòng trọ"><LandlordDashboard /></MainLayout></ProtectedRoute>} />
-      <Route path="/tenants" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý khách thuê"><Tenants /></MainLayout></ProtectedRoute>} />
-      <Route path="/invoices" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý hóa đơn"><Invoices /></MainLayout></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute role="landlord"><MainLayout title="Cài đặt hệ thống"><Settings /></MainLayout></ProtectedRoute>} />
-      <Route path="/contract" element={<ProtectedRoute role="landlord"><MainLayout title="Hợp đồng điện tử"><Contract /></MainLayout></ProtectedRoute>} />
-      <Route path="/contracts/:id" element={<ProtectedRoute><MainLayout title="Chi tiết hợp đồng"><ContractDetail /></MainLayout></ProtectedRoute>} />
-      <Route path="/meter-reading" element={<ProtectedRoute role="landlord"><MainLayout title="Ghi chỉ số điện nước"><ManagerMeterReading/></MainLayout></ProtectedRoute>} />
-      <Route path="/maintenance" element={<ProtectedRoute role="landlord"><MainLayout title="Quản lý bảo trì"><ManagerMaintenance /></MainLayout></ProtectedRoute>} />
-      <Route path="/tenant-approval" element={<ProtectedRoute role="landlord"><MainLayout title="Phê duyệt tài khoản"><TenantApproval /></MainLayout></ProtectedRoute>} />
-      <Route path="/financial-dashboard" element={<ProtectedRoute role="landlord"><MainLayout title="Bảng điều khiển tài chính"><FinancialDashboard /></MainLayout></ProtectedRoute>} />
-      <Route path="/notifications" element={<ProtectedRoute role="landlord"><MainLayout title="Hệ thống thông báo"><NotificationSystem /></MainLayout></ProtectedRoute>} />
+        <Route path="/landlord" element={<LandlordPage title="Tổng quan hệ thống"><Overview /></LandlordPage>} />
+        <Route path="/rooms" element={<LandlordPage title="Quản lý phòng trọ"><LandlordDashboard /></LandlordPage>} />
+        <Route path="/tenants" element={<LandlordPage title="Quản lý khách thuê"><Tenants /></LandlordPage>} />
+        <Route path="/invoices" element={<LandlordPage title="Quản lý hóa đơn"><Invoices /></LandlordPage>} />
+        <Route path="/settings" element={<LandlordPage title="Cài đặt hệ thống"><Settings /></LandlordPage>} />
+        <Route path="/contract" element={<LandlordPage title="Hợp đồng điện tử"><Contract /></LandlordPage>} />
+        <Route path="/meter-reading" element={<LandlordPage title="Ghi chỉ số điện nước"><ManagerMeterReading /></LandlordPage>} />
+        <Route path="/maintenance" element={<LandlordPage title="Quản lý bảo trì"><ManagerMaintenance /></LandlordPage>} />
+        <Route path="/tenant-approval" element={<LandlordPage title="Phê duyệt tài khoản"><TenantApproval /></LandlordPage>} />
+        <Route path="/financial-dashboard" element={<LandlordPage title="Bảng điều khiển tài chính"><FinancialDashboard /></LandlordPage>} />
+        <Route path="/notifications" element={<LandlordPage title="Hệ thống thông báo"><NotificationSystem /></LandlordPage>} />
 
-      {/* NHÓM 2: CÁC TUYẾN ĐƯỜNG CHO NGƯỜI THUÊ (TENANT) */}
-      {/* Lưu ý: Đã bọc MainLayout để người thuê cũng có Sidebar/Navbar chuyên nghiệp */}
-      <Route path="/tenant" element={<ProtectedRoute role="tenant"><MainLayout title="Cổng thông tin khách thuê"><TenantDashboard /></MainLayout></ProtectedRoute>} />
-      <Route path="/tenant/invoices" element={<ProtectedRoute role="tenant"><MainLayout title="Lịch sử hóa đơn"><TenantInvoices /></MainLayout></ProtectedRoute>} />
-      <Route path="/tenant/contract" element={<ProtectedRoute role="tenant"><MainLayout title="Hợp đồng của tôi"><TenantContract /></MainLayout></ProtectedRoute>} />
-      <Route path="/tenant/maintenance" element={<ProtectedRoute role="tenant"><MainLayout title="Báo cáo sự cố"><TenantMaintenance /></MainLayout></ProtectedRoute>} />
-      <Route path="/tenant/profile" element={<ProtectedRoute role="tenant"><MainLayout title="Hồ sơ cá nhân"><TenantProfile /></MainLayout></ProtectedRoute>} />
+        <Route
+          path="/contracts/:id"
+          element={
+            <ProtectedRoute>
+              <MainLayout title="Chi tiết hợp đồng"><ContractDetail /></MainLayout>
+            </ProtectedRoute>
+          }
+        />
 
-      {/* ĐIỀU HƯỚNG MẶC ĐỊNH & CATCH-ALL */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        <Route path="/tenant" element={<TenantPage title="Cổng thông tin khách thuê"><TenantDashboard /></TenantPage>} />
+        <Route path="/tenant/invoices" element={<TenantPage title="Lịch sử hóa đơn"><TenantInvoices /></TenantPage>} />
+        <Route path="/tenant/contract" element={<TenantPage title="Hợp đồng của tôi"><TenantContract /></TenantPage>} />
+        <Route path="/tenant/maintenance" element={<TenantPage title="Báo cáo sự cố"><TenantMaintenance /></TenantPage>} />
+        <Route path="/tenant/profile" element={<TenantPage title="Hồ sơ cá nhân"><TenantProfile /></TenantPage>} />
+
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

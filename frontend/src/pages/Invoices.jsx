@@ -150,11 +150,12 @@ function Toast({ toast }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 function DetailModal({ inv, onClose, onMarkPaid }) {
-  if (!inv) return null;
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState('');
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  if (!inv) return null;
 
   const isPaid = inv.payment_status === 'Paid' || inv.status === 'paid';
 
@@ -646,7 +647,7 @@ function CreateForm({ rooms, onCreated, showToast }) {
 }
 
 // ─── Invoice List ─────────────────────────────────────────────────────────────
-function InvoiceList({ reload, onMarkPaid, showToast, onDeleteInvoice }) {
+function InvoiceList({ reload, onMarkPaid, onDeleteInvoice }) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState('all');
@@ -1007,7 +1008,6 @@ export default function Invoices() {
           <InvoiceList
             reload={reload}
             onMarkPaid={handleMarkPaid}
-            showToast={showToast}
             onDeleteInvoice={handleDeleteInvoice}
           />
         </div>

@@ -60,7 +60,6 @@ function RequestModal({ req, onClose, onUpdate }) {
   const [saving, setSaving]   = useState(false);
   const [err, setErr]         = useState('');
 
-  const sc = STATUS_CFG[status] || STATUS_CFG.pending;
   const pc = PRIORITY_CFG[req.priority] || PRIORITY_CFG.normal;
   const catIcon = CATEGORY_ICONS[req.category] || '🔧';
 

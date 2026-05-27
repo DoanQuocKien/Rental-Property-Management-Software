@@ -494,7 +494,7 @@ export default function NotificationSystem() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     setLoading(true);

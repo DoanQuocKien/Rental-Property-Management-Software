@@ -4,7 +4,7 @@ Ung dung quan ly nha tro gom backend (Node.js + Express + SQLite) va frontend (R
 
 ## Yeu cau moi truong
 
-- Node.js >= 18
+- Node.js >= 20
 - npm >= 9
 
 ## Cai dat va chay du an
@@ -31,6 +31,16 @@ JWT_REFRESH_EXPIRES_IN=7d
 
 Neu thieu `JWT_SECRET`, backend se khong khoi dong.
 
+### 2.1. Chay bang Docker Compose
+
+```bash
+docker compose up --build
+```
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:5000/api`
+- Health check: `http://localhost:5000/api/health`
+
 ### 3. Chay backend
 
 ```bash
@@ -50,9 +60,23 @@ npm run dev
 ### Backend tests
 
 ```bash
-cd backend
-npm test -- --runInBand
+npm test
 ```
+
+### Frontend lint/build
+
+```bash
+npm run lint:frontend
+npm run build:frontend
+```
+
+## Tai lieu bo sung
+
+- `docs/SOFTWARE_SPECIFICATION.md`: dac ta chuc nang, he thong, du lieu, giao dien.
+- `docs/USER_GUIDE.md`: huong dan cai dat va su dung.
+- `docs/TESTING_AND_TOOLS.md`: cac loai kiem thu va cong cu su dung.
+- `docs/TEAM_PROCESS.md`: quy trinh phoi hop va tiep nhan feedback.
+- `docs/QUALITY_CHECKLIST.md`: checklist chat luong source code, runtime, documentation.
 
 ## Cau truc co so du lieu hien tai
 

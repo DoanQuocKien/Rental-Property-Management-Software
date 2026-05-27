@@ -3,9 +3,20 @@ const path = require('path');
 const fs = require('fs');
 
 // Use a test database
-process.env.DB_PATH = path.join(__dirname, 'test.db');
+process.env.NODE_ENV = 'test';
+process.env.DB_PATH = path.join(__dirname, `test-${process.pid}.db`);
 process.env.JWT_SECRET = 'test_secret';
 process.env.JWT_REFRESH_SECRET = 'test_refresh_secret';
+
+jest.mock('../routes/reports', () => {
+  const express = require('express');
+  const router = express.Router();
+
+  router.get('/temporary-residence', (_req, res) => res.status(501).json({ error: 'Reports mocked in tests' }));
+  router.get('/tax', (_req, res) => res.status(501).json({ error: 'Reports mocked in tests' }));
+
+  return router;
+});
 
 // Clean up test db before tests
 if (fs.existsSync(process.env.DB_PATH)) {
