@@ -344,6 +344,32 @@ db.serialize(() => {
   db.run('CREATE INDEX IF NOT EXISTS idx_revoked_access_expires_at ON revoked_access_tokens(expires_at)');
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS landlord_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      landlord_id INTEGER NOT NULL UNIQUE,
+      electricity_price REAL DEFAULT 0,
+      water_price REAL DEFAULT 0,
+      wifi_price REAL DEFAULT 0,
+      garbage_price REAL DEFAULT 0,
+      parking_price REAL DEFAULT 0,
+      property_name TEXT,
+      address TEXT,
+      total_floors INTEGER,
+      total_rooms INTEGER,
+      rules TEXT,
+      wifi_info TEXT,
+      parking TEXT,
+      deposit_months INTEGER DEFAULT 2,
+      notice_days INTEGER DEFAULT 30,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (landlord_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_landlord_settings_landlord_id ON landlord_settings(landlord_id)');
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,

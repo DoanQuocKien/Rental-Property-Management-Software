@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
@@ -444,7 +444,8 @@ function ServiceTab({ form, onChange, onBulkUpdate }) {
           onBulkUpdate('service', res.data.data);
         }
       } catch (err) {
-        console.error('Không tải được cấu hình dịch vụ', err);
+        console.error('Không tải được cấu hình dịch vụ:', err.response?.data?.message || err.message);
+        setError('Không thể tải cấu hình. Sử dụng giá trị mặc định.');
       } finally {
         setLoading(false);
       }
@@ -532,7 +533,7 @@ function ServiceTab({ form, onChange, onBulkUpdate }) {
         <button
           type="submit"
           disabled={saving}
-          style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+          style={{ padding: '11px 28px', border: 'none', borderRadius: '8px', background: saving ? '#a0aec0' : 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer' }}
         >
           {saving ? 'Đang lưu...' : '💾 Lưu cấu hình dịch vụ'}
         </button>
@@ -586,6 +587,12 @@ export default function Settings() {
     parking_price: ''
   });
 
+  // Security form state
+  const [securityForm, setSecurityForm] = useState({
+    twoFactor: false,
+    loginNotif: false,
+  });
+
   // Generic updater: onChange('account' | 'property' | 'security' | 'service', key, value)
   const handleChange = (section, key, value) => {
     if (section === 'account') setAccountForm((f) => ({ ...f, [key]: value }));
@@ -595,9 +602,10 @@ export default function Settings() {
   };
 
   // Hàm update toàn bộ data (dùng khi load API lần đầu)
-  const handleBulkUpdate = (section, data) => {
+  // Use useCallback to prevent infinite loops in ServiceTab useEffect
+  const handleBulkUpdate = useCallback((section, data) => {
     if (section === 'service') setServiceForm(data);
-  };
+  }, []);
 
   const tabs = [
     { id: 'account', icon: '👤', label: 'Tài khoản' },

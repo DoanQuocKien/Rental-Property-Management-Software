@@ -53,6 +53,188 @@ router.get('/tenants', authenticateToken, requireRole('landlord'), async (req, r
   }
 });
 
+// GET /api/landlord/tenants/pending — Danh sách khách thuê chưa được phê duyệt
+// (những người vừa đăng ký và chưa có hợp đồng)
+router.get('/tenants/pending', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const pendingTenants = await db.allAsync(
+      `SELECT
+        u.id,
+        COALESCE(u.full_name, u.name) as fullName,
+        u.email,
+        u.phone_number as phoneNumber,
+        u.citizen_id as citizenID,
+        u.permanent_address as permanentAddress,
+        u.created_at as createdAt,
+        u.status
+       FROM users u
+       WHERE u.role IN ('tenant', 'Tenant') 
+       AND u.status = 'pending'
+       AND NOT EXISTS (
+         SELECT 1 FROM lease_contracts lc 
+         JOIN rooms r ON lc.room_id = r.id 
+         WHERE lc.tenant_id = u.id AND r.landlord_id = ?
+       )
+       ORDER BY u.created_at DESC`,
+      [req.user.id]
+    );
+
+    return res.json({
+      status: 'success',
+      data: pendingTenants,
+    });
+  } catch (err) {
+    console.error('Get pending tenants error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Có lỗi khi lấy danh sách khách thuê chưa duyệt. Vui lòng thử lại sau.',
+      errorCode: 'FETCH_FAILED',
+    });
+  }
+});
+
+// PUT /api/landlord/tenants/:tenantId/approve — Phê duyệt khách thuê
+router.put('/tenants/:tenantId/approve', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    // Update tenant status to active
+    await db.runAsync(
+      `UPDATE users SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND role IN ('tenant', 'Tenant')`,
+      [tenantId]
+    );
+
+    res.json({
+      status: 'success',
+      message: 'Khách thuê đã được phê duyệt thành công',
+    });
+  } catch (err) {
+    console.error('Approve tenant error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Có lỗi khi phê duyệt khách thuê. Vui lòng thử lại sau.',
+    });
+  }
+});
+
+// GET /api/landlord/dashboard/tenants — Lấy tất cả khách thuê (active + pending) cho dashboard
+router.get('/dashboard/tenants', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    // Fetch active tenants with contracts
+    const activeTenants = await db.allAsync(
+      `SELECT
+        u.id,
+        COALESCE(u.full_name, u.name) as fullName,
+        u.email,
+        u.phone_number as phoneNumber,
+        u.citizen_id as citizenID,
+        u.permanent_address as permanentAddress,
+        u.created_at as createdAt,
+        u.status,
+        lc.id as contractID,
+        lc.start_date as startDate,
+        lc.end_date as endDate,
+        lc.status as contractStatus,
+        lc.rental_price as rentalPrice,
+        lc.deposit,
+        r.id as roomID,
+        r.name as roomName
+       FROM users u
+       JOIN lease_contracts lc ON lc.tenant_id = u.id
+       JOIN rooms r ON lc.room_id = r.id
+       WHERE r.landlord_id = ? AND u.status = 'active' AND lc.status = 'active'
+       ORDER BY lc.created_at DESC`,
+      [req.user.id]
+    );
+
+    // Fetch pending tenants without contracts
+    const pendingTenants = await db.allAsync(
+      `SELECT
+        u.id,
+        COALESCE(u.full_name, u.name) as fullName,
+        u.email,
+        u.phone_number as phoneNumber,
+        u.citizen_id as citizenID,
+        u.permanent_address as permanentAddress,
+        u.created_at as createdAt,
+        u.status,
+        NULL as contractID,
+        NULL as startDate,
+        NULL as endDate,
+        NULL as contractStatus,
+        NULL as rentalPrice,
+        NULL as deposit,
+        NULL as roomID,
+        NULL as roomName
+       FROM users u
+       WHERE u.role IN ('tenant', 'Tenant') 
+       AND u.status = 'pending'
+       AND NOT EXISTS (
+         SELECT 1 FROM lease_contracts lc 
+         JOIN rooms r ON lc.room_id = r.id 
+         WHERE lc.tenant_id = u.id AND r.landlord_id = ?
+       )
+       ORDER BY u.created_at DESC`,
+      [req.user.id]
+    );
+
+    const allTenants = [...activeTenants, ...pendingTenants];
+
+    return res.json({
+      status: 'success',
+      data: {
+        activeTenants,
+        pendingTenants,
+        allTenants,
+      },
+    });
+  } catch (err) {
+    console.error('Get dashboard tenants error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Có lỗi khi lấy danh sách khách thuê. Vui lòng thử lại sau.',
+      errorCode: 'FETCH_FAILED',
+    });
+  }
+});
+
+// GET /api/landlord/all — Danh sách tất cả khách thuê (active + pending) cho dropdown/selection
+router.get('/all', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const allTenants = await db.allAsync(
+      `SELECT
+        u.id,
+        COALESCE(u.full_name, u.name) as fullName,
+        u.email,
+        u.phone_number as phoneNumber,
+        u.citizen_id as citizenID,
+        u.permanent_address as permanentAddress,
+        u.created_at as createdAt,
+        u.status,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM lease_contracts lc2
+          WHERE lc2.tenant_id = u.id AND lc2.status = 'active'
+        ) THEN 1 ELSE 0 END as hasActiveContract
+       FROM users u
+       WHERE u.role IN ('tenant', 'Tenant')
+       ORDER BY u.created_at DESC`,
+      [req.user.id]
+    );
+
+    return res.json({
+      status: 'success',
+      data: allTenants,
+    });
+  } catch (err) {
+    console.error('Get all tenants error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Có lỗi khi lấy danh sách khách thuê. Vui lòng thử lại sau.',
+      errorCode: 'FETCH_FAILED',
+    });
+  }
+});
+
 // GET /api/landlord/tenants/all — Tất cả tài khoản tenant trong hệ thống
 // (để landlord tìm kiếm khi tạo hợp đồng mới)
 router.get('/tenants/all', authenticateToken, requireRole('landlord'), async (req, res) => {
@@ -482,6 +664,163 @@ router.get('/financial-stats', authenticateToken, requireRole('landlord'), async
   } catch (err) {
     console.error(err);
     res.status(500).json({ status: 'error', message: 'Lỗi server khi lấy thống kê' });
+  }
+});
+
+// GET /api/landlord/settings — Lấy cấu hình dịch vụ của landlord
+router.get('/settings', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    let settings = await db.getAsync(
+      `SELECT * FROM landlord_settings WHERE landlord_id = ?`,
+      [req.user.id]
+    );
+
+    // If no settings exist, return default values
+    if (!settings) {
+      settings = {
+        landlord_id: req.user.id,
+        electricity_price: 0,
+        water_price: 0,
+        wifi_price: 0,
+        garbage_price: 0,
+        parking_price: 0,
+      };
+    }
+
+    res.json({
+      status: 'success',
+      data: settings,
+    });
+  } catch (err) {
+    console.error('Get landlord settings error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lấy cấu hình. Vui lòng thử lại sau.',
+    });
+  }
+});
+
+// PUT /api/landlord/settings — Lưu cấu hình dịch vụ của landlord
+router.put('/settings', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const {
+      electricity_price,
+      water_price,
+      wifi_price,
+      garbage_price,
+      parking_price,
+      property_name,
+      address,
+      total_floors,
+      total_rooms,
+      rules,
+      wifi_info,
+      parking,
+      deposit_months,
+      notice_days,
+    } = req.body;
+
+    // Check if settings already exist for this landlord
+    const existingSettings = await db.getAsync(
+      `SELECT id FROM landlord_settings WHERE landlord_id = ?`,
+      [req.user.id]
+    );
+
+    if (existingSettings) {
+      // UPDATE existing settings
+      await db.runAsync(
+        `UPDATE landlord_settings
+         SET electricity_price = ?,
+             water_price = ?,
+             wifi_price = ?,
+             garbage_price = ?,
+             parking_price = ?,
+             property_name = ?,
+             address = ?,
+             total_floors = ?,
+             total_rooms = ?,
+             rules = ?,
+             wifi_info = ?,
+             parking = ?,
+             deposit_months = ?,
+             notice_days = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE landlord_id = ?`,
+        [
+          electricity_price || 0,
+          water_price || 0,
+          wifi_price || 0,
+          garbage_price || 0,
+          parking_price || 0,
+          property_name || null,
+          address || null,
+          total_floors || null,
+          total_rooms || null,
+          rules || null,
+          wifi_info || null,
+          parking || null,
+          deposit_months || 2,
+          notice_days || 30,
+          req.user.id,
+        ]
+      );
+    } else {
+      // INSERT new settings
+      await db.runAsync(
+        `INSERT INTO landlord_settings (
+          landlord_id,
+          electricity_price,
+          water_price,
+          wifi_price,
+          garbage_price,
+          parking_price,
+          property_name,
+          address,
+          total_floors,
+          total_rooms,
+          rules,
+          wifi_info,
+          parking,
+          deposit_months,
+          notice_days
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.id,
+          electricity_price || 0,
+          water_price || 0,
+          wifi_price || 0,
+          garbage_price || 0,
+          parking_price || 0,
+          property_name || null,
+          address || null,
+          total_floors || null,
+          total_rooms || null,
+          rules || null,
+          wifi_info || null,
+          parking || null,
+          deposit_months || 2,
+          notice_days || 30,
+        ]
+      );
+    }
+
+    // Fetch and return the updated settings
+    const updatedSettings = await db.getAsync(
+      `SELECT * FROM landlord_settings WHERE landlord_id = ?`,
+      [req.user.id]
+    );
+
+    res.json({
+      status: 'success',
+      message: 'Cấu hình dịch vụ đã được lưu thành công',
+      data: updatedSettings,
+    });
+  } catch (err) {
+    console.error('Save landlord settings error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lưu cấu hình. Vui lòng thử lại sau.',
+    });
   }
 });
 
