@@ -33,7 +33,7 @@ function getRemainingAmount(invoice) {
 
 export default function TenantInvoices() {
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [payingInvoice, setPayingInvoice] = useState(null);
   const [copied, setCopied] = useState(false);

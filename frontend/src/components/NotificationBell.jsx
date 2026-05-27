@@ -106,7 +106,7 @@ async function fetchLandlordNotifications() {
         });
       }
     }
-  } catch (_) { /* silent */ }
+  } catch { /* silent */ }
 
   if (notifs.length === 0) {
     notifs.push({
@@ -231,7 +231,7 @@ async function fetchTenantNotifications() {
         });
       });
     }
-  } catch (_) { /* silent */ }
+  } catch { /* silent */ }
 
   if (notifs.length === 0) {
     notifs.push({
@@ -337,7 +337,7 @@ export default function NotificationBell({ role = 'landlord' }) {
         : await fetchTenantNotifications();
       setNotifs(data);
       setLastFetch(new Date());
-    } catch (_) { /* silent */ }
+    } catch { /* silent */ }
     finally { setLoading(false); }
   }, [role]);
 

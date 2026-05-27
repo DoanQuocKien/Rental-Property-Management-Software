@@ -1,20 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-
-const COLORS = ['#4f46e5', '#7c3aed', '#059669', '#d97706', '#dc2626'];
 
 // Utility functions
 const fmt = (n) => Number(n || 0).toLocaleString('vi-VN');
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
-const fmtCurrency = (n) => {
-  const amount = Number(n || 0);
-  return amount.toLocaleString('vi-VN', { minimumFractionDigits: 0 });
-};
-
 // Injected CSS
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');

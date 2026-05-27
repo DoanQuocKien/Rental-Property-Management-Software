@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "Rental Property Management Software - Sprint 1",
   "scripts": {
-    "start:backend": "cd backend && npm start",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build:frontend": "cd frontend && npm run build",
-    "test": "cd backend && npm test",
-    "test:coverage": "cd backend && npm run test:coverage",
-    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+    "start:backend": "npm --prefix backend start",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "test": "npm --prefix backend test",
+    "test:coverage": "npm --prefix backend run test:coverage",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install"
   }
 }

@@ -272,7 +272,7 @@ export default function TenantNotifications() {
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchNotifications = async () => {
     setLoading(true);

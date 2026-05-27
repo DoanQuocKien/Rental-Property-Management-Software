@@ -284,7 +284,7 @@ export default function AuditLog() {
 
   useEffect(() => {
     fetchLogs();
-  }, [filters, pagination.offset, pagination.limit]);
+  }, [filters, pagination.offset, pagination.limit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));

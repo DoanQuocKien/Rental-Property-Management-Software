@@ -43,7 +43,8 @@ function ContractPreview({ form, selectedRoom, selectedTenant }) {
     ? Math.round((end - start) / (1000 * 60 * 60 * 24 * 30))
     : '___';
 
-  const contractNo = `HD${String(Math.floor(Math.random() * 9000) + 1000).padStart(6, '0')}/${new Date().getFullYear()}`;
+  const stableContractSeed = (Number(form.room_id || 0) * 1000) + Number(form.tenant_id || 0);
+  const contractNo = `HD${String(stableContractSeed).padStart(6, '0')}/${new Date().getFullYear()}`;
   const fmt = (n) => n ? Number(n).toLocaleString('vi-VN') : '___';
 
   return (
