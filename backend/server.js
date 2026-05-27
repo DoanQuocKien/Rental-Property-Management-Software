@@ -21,7 +21,11 @@ const path = require('path');
 
 const app       = express();
 const isTestEnv = process.env.NODE_ENV === 'test';
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'https://rental-property-management-software.vercel.app',
+];
+const allowedOrigins = (process.env.FRONTEND_URL || defaultAllowedOrigins.join(','))
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -33,7 +37,9 @@ app.use(cors({
       callback(null, true);
       return;
     }
-    callback(new Error('Origin not allowed by CORS'));
+    const error = new Error(`Origin not allowed by CORS: ${origin}`);
+    error.statusCode = 403;
+    callback(error);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -89,7 +95,7 @@ app.use((req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal server error' });
 });
 
 // ── Start ─────────────────────────────────────────────────────

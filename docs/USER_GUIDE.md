@@ -29,7 +29,23 @@ npm run dev:frontend
 
 6. Open `http://localhost:5173`.
 
-## 2. Docker Setup
+## 2. Production Environment
+
+Backend on Render:
+
+```env
+FRONTEND_URL=https://rental-property-management-software.vercel.app
+```
+
+Frontend on Vercel:
+
+```env
+VITE_API_URL=https://rental-property-management-software.onrender.com/api
+```
+
+Redeploy both services after changing environment variables. Vite reads `VITE_API_URL` at build time, so the frontend must be rebuilt after the variable is updated.
+
+## 3. Docker Setup
 
 ```bash
 docker compose up --build
@@ -39,7 +55,7 @@ docker compose up --build
 - Backend health check: `http://localhost:5000/api/health`
 - SQLite data is stored in the `backend-data` Docker volume.
 
-## 3. Landlord Workflow
+## 4. Landlord Workflow
 
 1. Register or login as landlord.
 2. Create rooms from the room management screen.
@@ -51,7 +67,7 @@ docker compose up --build
 8. Send notifications to all or selected tenants.
 9. Review reports and audit logs when needed.
 
-## 4. Tenant Workflow
+## 5. Tenant Workflow
 
 1. Register as tenant and wait for landlord approval when required.
 2. Login after approval.
@@ -61,10 +77,11 @@ docker compose up --build
 6. Read landlord notifications.
 7. Update profile and change password from settings/profile screens.
 
-## 5. Troubleshooting
+## 6. Troubleshooting
 
 - If PowerShell blocks `npm`, use `npm.cmd`.
 - If backend refuses to start, verify `backend/.env` has `JWT_SECRET`.
 - If ports are busy, change `PORT` for backend or pass another Vite port.
 - If dependencies are missing, rerun `npm run install:all`.
 - On Render, if SQLite fails with `GLIBC_2.38 not found`, clear the Render build cache and redeploy. The backend includes `.npmrc` with `build-from-source=true` so `sqlite3` is compiled against Render's Linux image instead of using an incompatible prebuilt binary.
+- If browser requests fail on Vercel with a generic registration/login error, verify Render `FRONTEND_URL` exactly matches `https://rental-property-management-software.vercel.app`.

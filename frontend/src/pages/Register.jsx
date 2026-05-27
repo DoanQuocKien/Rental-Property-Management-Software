@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Register() {
   const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'tenant' });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -13,22 +14,32 @@ export default function Register() {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setError('');
+    setSuccess('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
     try {
       const res = await api.post('/auth/register', {
         ...form,
         name: form.fullName,
         email: form.email.trim(),
       });
-      login(res.data.user, res.data.token, res.data.refreshToken);
-      navigate(res.data.user.role === 'landlord' ? '/landlord' : '/tenant');
+      if (res.data.token && res.data.refreshToken) {
+        login(res.data.user, res.data.token, res.data.refreshToken);
+        navigate(res.data.user.role === 'landlord' ? '/landlord' : '/tenant');
+        return;
+      }
+
+      setSuccess(res.data.message || 'Đăng ký thành công. Vui lòng chờ phê duyệt trước khi đăng nhập.');
+      setTimeout(() => navigate('/login'), 2500);
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      const serverMessage = err.response?.data?.error || err.response?.data?.message;
+      const networkMessage = 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra VITE_API_URL/CORS trên môi trường deploy.';
+      setError(serverMessage || networkMessage);
     } finally {
       setLoading(false);
     }
@@ -40,6 +51,7 @@ export default function Register() {
         <h1 className="auth-title">Rental Property Management</h1>
         <h2 className="auth-subtitle">Đăng ký tài khoản</h2>
         {error && <div className="error-message">{error}</div>}
+        {success && <div className="success-message">{success}</div>}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="fullName">Họ và tên</label>

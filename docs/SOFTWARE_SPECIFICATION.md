@@ -87,6 +87,10 @@ See `README.md` for detailed schema columns.
 
 Base URL: `http://localhost:5000/api`
 
+Production backend URL: `https://rental-property-management-software.onrender.com/api`
+
+Production frontend URL: `https://rental-property-management-software.vercel.app`
+
 Key route groups:
 
 - `/auth`: register, login, refresh, logout, revoke, change password.
