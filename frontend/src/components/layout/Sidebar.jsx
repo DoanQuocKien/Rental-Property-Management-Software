@@ -47,8 +47,12 @@ export default function Sidebar() {
     <aside className="sidebar" style={{
       background: sidebarTheme.background,
       width: '260px',
+      height: '100vh',
       minHeight: '100vh',
       color: 'white',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
       transition: 'all 0.3s ease'
     }}>
       <div className="sidebar-logo" style={{ padding: '25px 20px', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
@@ -56,7 +60,13 @@ export default function Sidebar() {
         <span style={{ fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: '1px' }}>RENTAL APP</span>
       </div>
 
-      <nav className="sidebar-nav" style={{ marginTop: '20px' }}>
+      <nav className="sidebar-nav" style={{
+        marginTop: '20px',
+        flex: '1 1 auto',
+        minHeight: 0,
+        overflowY: 'auto',
+        paddingBottom: '12px',
+      }}>
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -84,7 +94,14 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      <div className="sidebar-footer" style={{ position: 'absolute', bottom: '20px', width: '100%', padding: '0 20px', fontSize: '0.8rem', opacity: 0.7 }}>
+      <div className="sidebar-footer" style={{
+        width: '100%',
+        padding: '16px 20px',
+        fontSize: '0.8rem',
+        opacity: 0.7,
+        flexShrink: 0,
+        borderTop: '1px solid rgba(255,255,255,0.1)',
+      }}>
         <p>Đang đăng nhập:</p>
         <p style={{ fontWeight: 'bold' }}>{user?.name}</p>
         <p style={{ fontSize: '0.7rem' }}>VAI TRÒ: {isLandlord ? 'CHỦ TRỌ' : 'NGƯỜI THUÊ'}</p>
