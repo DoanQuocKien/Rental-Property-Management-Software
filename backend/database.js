@@ -10,13 +10,19 @@ function buildDemoRoomName(letterIndex, numberIndex) {
   return `${String.fromCharCode(65 + letterIndex)}${numberIndex}`;
 }
 
-function ensureColumn(tableName, columnName, columnDef) {
+function ensureColumn(tableName, columnName, columnDef, onReady) {
   db.all(`PRAGMA table_info(${tableName})`, (err, columns) => {
     if (err || !Array.isArray(columns)) {
+      if (onReady) onReady(err);
       return;
     }
 
     const exists = columns.some((column) => column.name === columnName);
+    if (exists) {
+      if (onReady) onReady();
+      return;
+    }
+
     if (!exists) {
       // SQLite cannot ADD COLUMN with non-constant defaults like CURRENT_TIMESTAMP.
       const hasNonConstantDefault = /\bDEFAULT\s+\(?\s*(CURRENT_(TIME|DATE|TIMESTAMP)|datetime\s*\()/i.test(columnDef);
@@ -28,6 +34,7 @@ function ensureColumn(tableName, columnName, columnDef) {
         if (alterErr) {
           console.error(`Failed to add column ${tableName}.${columnName}: ${alterErr.message}`);
         }
+        if (onReady) onReady(alterErr);
       });
     }
   });
@@ -67,32 +74,46 @@ db.closeAsync = () => new Promise((resolve, reject) => {
     }
     resolve();
   });
-});db.insertAuditLogAsync = (auditLog) => {
+});
+
+db.insertAuditLogAsync = (auditLog) => {
   const payloadText = auditLog.payload === undefined || auditLog.payload === null
     ? null
     : JSON.stringify(auditLog.payload);
+  const targetTable = auditLog.targetTable ?? auditLog.entityType ?? null;
+  const targetId = auditLog.targetId ?? auditLog.entityId ?? null;
+  const status = auditLog.status
+    ?? (auditLog.statusCode && auditLog.statusCode >= 400 ? 'failed' : 'success');
 
   return db.runAsync(
     `INSERT INTO audit_logs (
       user_id,
+      landlord_id,
       action,
+      entity_type,
+      entity_id,
       target_table,
       target_id,
       path,
       method,
       payload,
       status_code,
+      status,
       created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       auditLog.userId ?? null,
+      auditLog.landlordId ?? auditLog.userId ?? null,
       auditLog.action,
-      auditLog.targetTable,
-      auditLog.targetId ?? null,
-      auditLog.path,
-      auditLog.method,
+      auditLog.entityType ?? targetTable,
+      targetId,
+      targetTable,
+      targetId,
+      auditLog.path ?? null,
+      auditLog.method ?? null,
       payloadText,
       auditLog.statusCode ?? null,
+      status,
       auditLog.createdAt ?? new Date().toISOString(),
     ]
   );
@@ -341,53 +362,49 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
+      landlord_id INTEGER,
       action TEXT NOT NULL,
-      target_table TEXT NOT NULL,
-      target_id TEXT,
-      path TEXT NOT NULL,
-      method TEXT NOT NULL,
-      payload TEXT,
-      status_code INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-    )
-  `);
-
-  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)');
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      landlord_id INTEGER NOT NULL,
-      action TEXT NOT NULL,
-      entity_type TEXT NOT NULL,
+      entity_type TEXT,
       entity_id INTEGER,
       description TEXT,
       old_values TEXT,
       new_values TEXT,
+      target_table TEXT,
+      target_id TEXT,
+      path TEXT,
+      method TEXT,
+      payload TEXT,
+      status_code INTEGER,
       status TEXT DEFAULT 'success',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (landlord_id) REFERENCES users(id) ON DELETE CASCADE
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (landlord_id) REFERENCES users(id) ON DELETE SET NULL
     )
   `);
 
   db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_landlord_id ON audit_logs(landlord_id)');
-  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)');
   db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)');
 
-  ensureColumn('audit_logs', 'user_id', 'INTEGER NOT NULL');
-  ensureColumn('audit_logs', 'landlord_id', 'INTEGER NOT NULL');
+  ensureColumn('audit_logs', 'user_id', 'INTEGER');
+  ensureColumn('audit_logs', 'landlord_id', 'INTEGER', () => {
+    db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_landlord_id ON audit_logs(landlord_id)');
+  });
   ensureColumn('audit_logs', 'action', 'TEXT NOT NULL');
-  ensureColumn('audit_logs', 'entity_type', 'TEXT NOT NULL');
+  ensureColumn('audit_logs', 'entity_type', 'TEXT', () => {
+    db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_type ON audit_logs(entity_type)');
+  });
   ensureColumn('audit_logs', 'entity_id', 'INTEGER');
   ensureColumn('audit_logs', 'description', 'TEXT');
   ensureColumn('audit_logs', 'old_values', 'TEXT');
   ensureColumn('audit_logs', 'new_values', 'TEXT');
+  ensureColumn('audit_logs', 'target_table', 'TEXT');
+  ensureColumn('audit_logs', 'target_id', 'TEXT');
+  ensureColumn('audit_logs', 'path', 'TEXT');
+  ensureColumn('audit_logs', 'method', 'TEXT');
+  ensureColumn('audit_logs', 'payload', 'TEXT');
+  ensureColumn('audit_logs', 'status_code', 'INTEGER');
   ensureColumn('audit_logs', 'status', "TEXT DEFAULT 'success'");
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)');
 
   if (!tokenCleanupInterval) {
     tokenCleanupInterval = setInterval(() => {
