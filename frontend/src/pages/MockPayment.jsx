@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios'; // Dùng axios thay cho api nội bộ
 
-// Thêm dòng này để gọi đúng URL backend
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const normalizedApiBaseUrl = rawApiBaseUrl.replace(/\/+$/, '');
+const API_BASE = normalizedApiBaseUrl.endsWith('/api')
+  ? normalizedApiBaseUrl
+  : `${normalizedApiBaseUrl}/api`;
 
 const styles = {
   page: {
@@ -110,8 +113,9 @@ export default function MockPayment() {
         if (!transferAmount && data?.remaining_amount > 0) {
           setTransferAmount(String(data.remaining_amount));
         }
-      } catch {
-        setError('Không tải được thông tin hóa đơn.');
+      } catch (err) {
+        const apiMessage = err?.response?.data?.message || err?.response?.data?.error;
+        setError(apiMessage || 'Không tải được thông tin hóa đơn.');
       } finally {
         setLoading(false);
       }
