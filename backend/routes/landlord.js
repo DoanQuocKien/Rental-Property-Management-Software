@@ -10,6 +10,127 @@ const { getPreviousMeterReading } = require('../services/meterReadingService');
 
 const router = express.Router();
 
+const SERVICE_SETTING_FIELDS = [
+  'electricity_price',
+  'water_price',
+  'wifi_price',
+  'garbage_price',
+  'parking_price',
+];
+
+const DEFAULT_SERVICE_SETTINGS = SERVICE_SETTING_FIELDS.reduce((settings, field) => {
+  settings[field] = 0;
+  return settings;
+}, {});
+
+function parseMoneyField(value, field) {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount) || amount < 0) {
+    const error = new Error(`${field} must be a non-negative number`);
+    error.statusCode = 400;
+    error.errorCode = 'INVALID_SERVICE_SETTING';
+    throw error;
+  }
+  return amount;
+}
+
+function toServiceSettings(row) {
+  return {
+    electricity_price: Number(row?.electricity_price || 0),
+    water_price: Number(row?.water_price || 0),
+    wifi_price: Number(row?.wifi_price || 0),
+    garbage_price: Number(row?.garbage_price || 0),
+    parking_price: Number(row?.parking_price || 0),
+  };
+}
+
+// GET /api/landlord/settings — Cấu hình giá dịch vụ của chủ trọ hiện tại
+router.get('/settings', authenticateToken, requireRole('landlord'), async (req, res) => {
+  try {
+    const settings = await db.getAsync(
+      `SELECT electricity_price, water_price, wifi_price, garbage_price, parking_price
+       FROM landlord_settings
+       WHERE landlord_id = ?`,
+      [req.user.id]
+    );
+
+    return res.json({
+      status: 'success',
+      data: settings ? toServiceSettings(settings) : DEFAULT_SERVICE_SETTINGS,
+    });
+  } catch (err) {
+    console.error('Get landlord settings error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Không thể tải cấu hình dịch vụ.',
+      errorCode: 'SETTINGS_FETCH_FAILED',
+    });
+  }
+});
+
+// PUT /api/landlord/settings — Lưu cấu hình giá dịch vụ của chủ trọ hiện tại
+router.put('/settings', authenticateToken, requireRole('landlord'), async (req, res) => {
+  let settings;
+
+  try {
+    settings = {
+      electricity_price: parseMoneyField(req.body?.electricity_price, 'electricity_price'),
+      water_price: parseMoneyField(req.body?.water_price, 'water_price'),
+      wifi_price: parseMoneyField(req.body?.wifi_price, 'wifi_price'),
+      garbage_price: parseMoneyField(req.body?.garbage_price, 'garbage_price'),
+      parking_price: parseMoneyField(req.body?.parking_price, 'parking_price'),
+    };
+  } catch (err) {
+    return res.status(err.statusCode || 400).json({
+      status: 'error',
+      message: 'Giá dịch vụ phải là số không âm.',
+      errorCode: err.errorCode || 'INVALID_SERVICE_SETTING',
+    });
+  }
+
+  try {
+    await db.runAsync(
+      `INSERT INTO landlord_settings (
+        landlord_id,
+        electricity_price,
+        water_price,
+        wifi_price,
+        garbage_price,
+        parking_price,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(landlord_id) DO UPDATE SET
+        electricity_price = excluded.electricity_price,
+        water_price = excluded.water_price,
+        wifi_price = excluded.wifi_price,
+        garbage_price = excluded.garbage_price,
+        parking_price = excluded.parking_price,
+        updated_at = CURRENT_TIMESTAMP`,
+      [
+        req.user.id,
+        settings.electricity_price,
+        settings.water_price,
+        settings.wifi_price,
+        settings.garbage_price,
+        settings.parking_price,
+      ]
+    );
+
+    return res.json({
+      status: 'success',
+      message: 'Đã lưu cấu hình dịch vụ thành công.',
+      data: settings,
+    });
+  } catch (err) {
+    console.error('Update landlord settings error:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Không thể lưu cấu hình dịch vụ.',
+      errorCode: 'SETTINGS_UPDATE_FAILED',
+    });
+  }
+});
+
 // GET /api/landlord/tenants — Danh sách tất cả khách thuê của landlord
 // (những người đang có hợp đồng active với phòng của landlord này)
 router.get('/tenants', authenticateToken, requireRole('landlord'), async (req, res) => {

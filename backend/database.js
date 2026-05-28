@@ -153,6 +153,23 @@ db.serialize(() => {
   ensureColumn('users', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS landlord_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      landlord_id INTEGER NOT NULL UNIQUE,
+      electricity_price REAL NOT NULL DEFAULT 0,
+      water_price REAL NOT NULL DEFAULT 0,
+      wifi_price REAL NOT NULL DEFAULT 0,
+      garbage_price REAL NOT NULL DEFAULT 0,
+      parking_price REAL NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (landlord_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_landlord_settings_landlord_id ON landlord_settings(landlord_id)');
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS rooms (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,

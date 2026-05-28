@@ -551,6 +551,122 @@ describe('Landlord Billing API', () => {
     });
   });
 
+  describe('GET/PUT /api/landlord/settings', () => {
+    it('should return default service settings before they are saved', async () => {
+      const res = await request(app)
+        .get('/api/landlord/settings')
+        .set('Authorization', `Bearer ${landlordToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data).toEqual({
+        electricity_price: 0,
+        water_price: 0,
+        wifi_price: 0,
+        garbage_price: 0,
+        parking_price: 0,
+      });
+    });
+
+    it('should save and reload landlord service settings', async () => {
+      const payload = {
+        electricity_price: 4000,
+        water_price: 18000,
+        wifi_price: 100000,
+        garbage_price: 30000,
+        parking_price: 120000,
+      };
+
+      const saveRes = await request(app)
+        .put('/api/landlord/settings')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send(payload);
+
+      expect(saveRes.statusCode).toBe(200);
+      expect(saveRes.body.status).toBe('success');
+      expect(saveRes.body.data).toEqual(payload);
+
+      const reloadRes = await request(app)
+        .get('/api/landlord/settings')
+        .set('Authorization', `Bearer ${landlordToken}`);
+
+      expect(reloadRes.statusCode).toBe(200);
+      expect(reloadRes.body.data).toEqual(payload);
+    });
+
+    it('should reject negative service settings', async () => {
+      const res = await request(app)
+        .put('/api/landlord/settings')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          electricity_price: -1,
+          water_price: 18000,
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.errorCode).toBe('INVALID_SERVICE_SETTING');
+    });
+  });
+
+  describe('PUT /api/tenants/profile', () => {
+    it('should update profile aliases used by the frontend', async () => {
+      const res = await request(app)
+        .put('/api/tenants/profile')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          fullName: 'Billing Landlord Updated',
+          phoneNumber: '0912345678',
+          citizenID: '012345678901',
+          permanentAddress: '123 Test Street',
+        });
+
+      expect(res.statusCode).toBe(200);
+
+      const profileRes = await request(app)
+        .get('/api/tenants/profile')
+        .set('Authorization', `Bearer ${landlordToken}`);
+
+      expect(profileRes.statusCode).toBe(200);
+      expect(profileRes.body.user.name).toBe('Billing Landlord Updated');
+      expect(profileRes.body.user.full_name).toBe('Billing Landlord Updated');
+      expect(profileRes.body.user.phone).toBe('0912345678');
+      expect(profileRes.body.user.phone_number).toBe('0912345678');
+      expect(profileRes.body.user.phoneNumber).toBe('0912345678');
+      expect(profileRes.body.user.citizen_id).toBe('012345678901');
+      expect(profileRes.body.user.permanent_address).toBe('123 Test Street');
+    });
+  });
+
+  describe('GET /api/invoices/:id/pdf', () => {
+    it('should return a PDF for a landlord invoice', async () => {
+      const createRes = await request(app)
+        .post('/api/invoices')
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .send({
+          roomID: roomId,
+          month: 5,
+          year: 2026,
+          rentAmount: 2500000,
+          electricityAmount: 0,
+          waterAmount: 0,
+          serviceAmount: 150000,
+          totalAmount: 2650000,
+          dueDate: '2026-05-31',
+        });
+
+      expect(createRes.statusCode).toBe(201);
+
+      const pdfRes = await request(app)
+        .get(`/api/invoices/${createRes.body.data.id}/pdf`)
+        .set('Authorization', `Bearer ${landlordToken}`)
+        .buffer();
+
+      expect(pdfRes.statusCode).toBe(200);
+      expect(pdfRes.headers['content-type']).toContain('application/pdf');
+      expect(pdfRes.body.length).toBeGreaterThan(100);
+    });
+  });
+
   describe('POST /api/landlord/invoices/calculate', () => {
     it('should calculate invoice total using previous reading from DB', async () => {
       const res = await request(app)

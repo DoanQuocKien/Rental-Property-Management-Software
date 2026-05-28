@@ -975,7 +975,7 @@ export default function Invoices() {
         userMessage = '❌ Không tìm thấy hóa đơn.';
       } else if (errorCode === 'FORBIDDEN') {
         userMessage = '❌ Bạn không có quyền xóa hóa đơn này.';
-      } else if (errorCode === 'CANNOT_DELETE_PAID') {
+      } else if (errorCode === 'CANNOT_DELETE_PAID_INVOICE') {
         userMessage = '❌ Không thể xóa hóa đơn đã thanh toán.';
       } else if (errorCode === 'DELETE_FAILED') {
         userMessage = '❌ Lỗi xóa hóa đơn. Vui lòng thử lại.';

@@ -459,8 +459,8 @@ function ServiceTab({ form, onChange, onBulkUpdate }) {
       await api.put('/landlord/settings', form);
       setSuccess('Đã lưu cấu hình dịch vụ thành công!');
       setTimeout(() => setSuccess(''), 3000);
-    } catch {
-      setError('Lỗi khi lưu cấu hình. Vui lòng thử lại.');
+    } catch (err) {
+      setError(err.response?.data?.message || err.response?.data?.error || 'Lỗi khi lưu cấu hình. Vui lòng thử lại.');
     } finally {
       setSaving(false);
     }

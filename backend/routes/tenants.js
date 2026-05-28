@@ -104,12 +104,21 @@ router.get('/profile', authenticateToken, (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  db.get('SELECT id, name, email, phone, citizen_id, permanent_address, date_of_birth, gender, created_at FROM users WHERE id = ?',
+  db.get('SELECT id, name, full_name, email, phone, phone_number, citizen_id, permanent_address, date_of_birth, gender, created_at FROM users WHERE id = ?',
     [req.user.id],
     (err, user) => {
       if (err) return res.status(500).json({ error: 'Không thể lấy thông tin' });
       if (!user) return res.status(404).json({ error: 'Người dùng không tìm thấy' });
-      res.json({ user });
+      res.json({
+        user: {
+          ...user,
+          fullName: user.full_name || user.name,
+          phone: user.phone || user.phone_number || '',
+          phoneNumber: user.phone_number || user.phone || '',
+          citizenID: user.citizen_id || '',
+          permanentAddress: user.permanent_address || '',
+        }
+      });
     }
   );
 });
@@ -122,14 +131,30 @@ router.put('/profile', authenticateToken, (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  const { name, phone, citizen_id, permanent_address, date_of_birth, gender } = req.body;
+  const {
+    name,
+    fullName,
+    phone,
+    phoneNumber,
+    citizen_id,
+    citizenID,
+    permanent_address,
+    permanentAddress,
+    date_of_birth,
+    gender
+  } = req.body;
+  const safeName = String(fullName || name || '').trim();
+  const safePhone = String(phoneNumber || phone || '').trim();
+  const safeCitizenId = String(citizenID || citizen_id || '').trim();
+  const safePermanentAddress = String(permanentAddress || permanent_address || '').trim();
 
-  if (!name) return res.status(400).json({ error: 'Tên không được để trống' });
+  if (!safeName) return res.status(400).json({ error: 'Tên không được để trống' });
 
   db.run(
-    `UPDATE users SET name = ?, phone = ?, citizen_id = ?, permanent_address = ?,
+    `UPDATE users SET name = ?, full_name = ?, phone = ?, phone_number = ?, citizen_id = ?, permanent_address = ?,
      date_of_birth = ?, gender = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    [name, phone || null, citizen_id || null, permanent_address || null,
+    [safeName, safeName, safePhone || null, safePhone || '',
+     safeCitizenId || null, safePermanentAddress || null,
      date_of_birth || null, gender || null, req.user.id],
     function (err) {
       if (err) return res.status(500).json({ error: 'Cập nhật thất bại' });
@@ -326,13 +351,39 @@ router.get('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
 
 // PUT /api/tenants/:id - Cập nhật thông tin khách thuê
 router.put('/:id', authenticateToken, requireRole('landlord'), (req, res) => {
-  const { name, phone, citizen_id, permanent_address, date_of_birth, gender } = req.body;
-  if (!name) return res.status(400).json({ error: 'Tên không được để trống' });
+  const {
+    name,
+    fullName,
+    phone,
+    phoneNumber,
+    citizen_id,
+    citizenID,
+    permanent_address,
+    permanentAddress,
+    date_of_birth,
+    gender
+  } = req.body;
+  const safeName = String(fullName || name || '').trim();
+  const safePhone = String(phoneNumber || phone || '').trim();
+  const safeCitizenId = String(citizenID || citizen_id || '').trim();
+  const safePermanentAddress = String(permanentAddress || permanent_address || '').trim();
+
+  if (!safeName) return res.status(400).json({ error: 'Tên không được để trống' });
 
   db.run(
-    `UPDATE users SET name = ?, phone = ?, citizen_id = ?, permanent_address = ?, date_of_birth = ?, gender = ?, updated_at = CURRENT_TIMESTAMP
+    `UPDATE users SET name = ?, full_name = ?, phone = ?, phone_number = ?, citizen_id = ?, permanent_address = ?, date_of_birth = ?, gender = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ? AND (role = 'tenant' OR role = 'Tenant')`,
-    [name, phone || null, citizen_id || null, permanent_address || null, date_of_birth || null, gender || null, req.params.id],
+    [
+      safeName,
+      safeName,
+      safePhone || null,
+      safePhone || '',
+      safeCitizenId || null,
+      safePermanentAddress || null,
+      date_of_birth || null,
+      gender || null,
+      req.params.id
+    ],
     function (err) {
       if (err) return res.status(500).json({ error: 'Cập nhật thất bại' });
       if (this.changes === 0) return res.status(404).json({ error: 'Không tìm thấy khách thuê' });
