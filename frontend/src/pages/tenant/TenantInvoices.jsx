@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../api';
 
 // --- HỆ THỐNG ICON SVG ---
@@ -25,6 +25,8 @@ const STATUS_MAP = {
   overdue: { label: 'Quá hạn', icon: <IconAlert />, bg: '#fffbeb', color: '#d69e2e' },
 };
 
+const INVOICE_REFRESH_INTERVAL_MS = 120_000;
+
 function getRemainingAmount(invoice) {
   const total = Number(invoice?.total_amount || 0);
   const paid = Number(invoice?.paid_amount || 0);
@@ -39,27 +41,33 @@ export default function TenantInvoices() {
   const [copied, setCopied] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedLoading, setSelectedLoading] = useState(false);
+  const fetchInFlightRef = useRef(false);
 
   const tenantColor = '#2d6a4f';
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
     setLoading(true);
     try {
       const res = await api.get('/tenants/invoices');
       setInvoices(res.data.invoices || []);
     } catch { setInvoices([]); }
-    finally { setLoading(false); }
-  };
+    finally {
+      fetchInFlightRef.current = false;
+      setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { fetchInvoices(); }, []);
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchInvoices();
-    }, 12000);
+    }, INVOICE_REFRESH_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchInvoices]);
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -82,7 +90,7 @@ export default function TenantInvoices() {
       window.history.replaceState({}, '', newUrl);
       fetchInvoices();
     }
-  }, []);
+  }, [fetchInvoices]);
 
   const filtered = filter === 'all' ? invoices : invoices.filter(i => i.status === filter);
   const totalUnpaid = invoices

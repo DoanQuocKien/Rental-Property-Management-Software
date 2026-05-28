@@ -110,9 +110,7 @@ export default function MockPayment() {
         const data = res.data?.data;
         setInvoice(data || null);
 
-        if (!transferAmount && data?.remaining_amount > 0) {
-          setTransferAmount(String(data.remaining_amount));
-        }
+        setTransferAmount((current) => current || (data?.remaining_amount > 0 ? String(data.remaining_amount) : current));
       } catch (err) {
         const apiMessage = err?.response?.data?.message || err?.response?.data?.error;
         setError(apiMessage || 'Không tải được thông tin hóa đơn.');
@@ -122,9 +120,11 @@ export default function MockPayment() {
     };
 
     fetchInvoice();
-  }, [invoiceId, transferAmount]);
+  }, [invoiceId]);
 
   const confirmTransfer = async () => {
+    if (submitting) return;
+
     const amount = parseAmount(transferAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Vui lòng nhập số tiền hợp lệ lớn hơn 0.');

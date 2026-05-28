@@ -14,7 +14,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-const POLLING_INTERVAL_MS = 60_000;
+const POLLING_INTERVAL_MS = 180_000;
+const MIN_REFRESH_INTERVAL_MS = 15_000;
+const OPEN_REFRESH_INTERVAL_MS = 30_000;
 
 // ── Type styling ──────────────────────────────────────────────────────────────
 const TYPE_STYLE = {
@@ -326,24 +328,36 @@ export default function NotificationBell({ role = 'landlord' }) {
   const [loading, setLoading] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
   const ref = useRef(null);
+  const inFlightRef = useRef(false);
+  const lastFetchAtRef = useRef(0);
 
   const accentColor = role === 'landlord' ? '#667eea' : '#2d6a4f';
 
-  const loadNotifs = useCallback(async () => {
+  const loadNotifs = useCallback(async ({ force = false } = {}) => {
+    const now = Date.now();
+    if (inFlightRef.current) return;
+    if (!force && now - lastFetchAtRef.current < MIN_REFRESH_INTERVAL_MS) return;
+
+    inFlightRef.current = true;
     setLoading(true);
     try {
       const data = role === 'landlord'
         ? await fetchLandlordNotifications()
         : await fetchTenantNotifications();
       setNotifs(data);
-      setLastFetch(new Date());
     } catch { /* silent */ }
-    finally { setLoading(false); }
+    finally {
+      const completedAt = new Date();
+      lastFetchAtRef.current = completedAt.getTime();
+      setLastFetch(completedAt);
+      inFlightRef.current = false;
+      setLoading(false);
+    }
   }, [role]);
 
-  // Load on mount + every 60s
+  // Load on mount + scheduled polling
   useEffect(() => {
-    loadNotifs();
+    loadNotifs({ force: true });
     const interval = setInterval(loadNotifs, POLLING_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [loadNotifs]);
@@ -364,7 +378,9 @@ export default function NotificationBell({ role = 'landlord' }) {
   const handleToggle = () => {
     const next = !open;
     setOpen(next);
-    if (next) loadNotifs(); // refresh on open
+    if (next && Date.now() - lastFetchAtRef.current > OPEN_REFRESH_INTERVAL_MS) {
+      loadNotifs();
+    }
   };
 
   return (
@@ -460,7 +476,7 @@ export default function NotificationBell({ role = 'landlord' }) {
                   Đọc hết
                 </button>
               )}
-              <button onClick={loadNotifs} title="Làm mới" style={{
+              <button onClick={() => loadNotifs()} title="Làm mới" style={{
                 background: 'none', border: 'none', color: '#a0aec0',
                 fontSize: '0.82rem', cursor: 'pointer', padding: '4px 8px', borderRadius: 6,
                 transition: 'color 0.15s',
@@ -506,7 +522,7 @@ export default function NotificationBell({ role = 'landlord' }) {
               {lastFetch ? `Cập nhật: ${lastFetch.toLocaleTimeString('vi-VN')}` : 'Chưa đồng bộ'}
               {' '}·{' '}
             </span>
-            <button onClick={loadNotifs} style={{
+            <button onClick={() => loadNotifs()} style={{
               background: 'none', border: 'none', fontSize: '0.72rem',
               color: accentColor, cursor: 'pointer', fontWeight: 600, padding: 0,
             }}>

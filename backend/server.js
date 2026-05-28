@@ -13,7 +13,6 @@ const landlordRoutes = require('./routes/landlord');
 const meterReadingRoutes = require('./routes/meter-readings');
 const invoiceRoutes = require('./routes/invoices');
 const maintenanceRoutes = require('./routes/maintenance-requests');
-const notificationsRoutes = require('./routes/notifications');
 const reportsRoutes = require('./routes/reports');
 const notificationRoutes = require('./routes/notifications');
 const auditRoutes = require('./routes/audit');
@@ -21,6 +20,7 @@ const path = require('path');
 
 const app       = express();
 const isTestEnv = process.env.NODE_ENV === 'test';
+app.set('trust proxy', 1);
 const defaultAllowedOrigins = [
   'http://localhost:5173',
   'https://rental-property-management-software.vercel.app',
@@ -52,21 +52,34 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ── Rate limiters ────────────────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { error: 'Too many requests, please try again later.' },
+  max: 50,
+  message: { error: 'Too many authentication requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => isTestEnv,
+  skip: (req) => isTestEnv || req.method === 'OPTIONS',
 });
 
-const apiLimiter = rateLimit({
+const isReadOnlyRequest = (req) => ['GET', 'HEAD'].includes(req.method);
+
+const readLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,                 // tăng lên 200 để NotificationBell polling không bị chặn
+  max: 1200,
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => isTestEnv,
+  skip: (req) => isTestEnv || req.method === 'OPTIONS' || !isReadOnlyRequest(req),
 });
+
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  message: { error: 'Too many write requests, please wait and try again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => isTestEnv || req.method === 'OPTIONS' || isReadOnlyRequest(req),
+});
+
+const apiLimiters = [readLimiter, writeLimiter];
 
 // ── Health check (dùng để giữ kết nối / liveness probe) ──────
 app.get('/api/health', (req, res) => {
@@ -74,17 +87,16 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/contracts', apiLimiter, contractRoutes);
-app.use('/api/rooms', apiLimiter, roomRoutes);
-app.use('/api/tenants', apiLimiter, tenantRoutes);
-app.use('/api/landlord', apiLimiter, landlordRoutes);
-app.use('/api/meter-readings', apiLimiter, meterReadingRoutes);
-app.use('/api/invoices', apiLimiter, invoiceRoutes);
-app.use('/api/maintenance-requests', apiLimiter, maintenanceRoutes);
-app.use('/api/notifications', apiLimiter, notificationsRoutes);
-app.use('/api/reports', apiLimiter, reportsRoutes);
-app.use('/api/notifications', apiLimiter, notificationRoutes);
-app.use('/api/audit-logs', apiLimiter, auditRoutes);
+app.use('/api/contracts', apiLimiters, contractRoutes);
+app.use('/api/rooms', apiLimiters, roomRoutes);
+app.use('/api/tenants', apiLimiters, tenantRoutes);
+app.use('/api/landlord', apiLimiters, landlordRoutes);
+app.use('/api/meter-readings', apiLimiters, meterReadingRoutes);
+app.use('/api/invoices', apiLimiters, invoiceRoutes);
+app.use('/api/maintenance-requests', apiLimiters, maintenanceRoutes);
+app.use('/api/notifications', apiLimiters, notificationRoutes);
+app.use('/api/reports', apiLimiters, reportsRoutes);
+app.use('/api/audit-logs', apiLimiters, auditRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────
 app.use((req, res) => {
