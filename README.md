@@ -1,211 +1,147 @@
 # Rental Property Management Software
 
-Ung dung quan ly nha tro gom backend (Node.js + Express + SQLite) va frontend (React + Vite).
+A full-stack rental property management system for landlords, staff, and tenants. The project includes a Node.js/Express backend with SQLite storage and a React/Vite frontend.
 
-## Yeu cau moi truong
+## Features
 
-- Node.js >= 20
-- npm >= 9
+- User authentication with access and refresh tokens
+- Role-based workflows for landlords, tenants, and staff
+- Room, tenant, and lease contract management
+- Electricity and water meter readings
+- Invoice creation, payment status tracking, and mock payment flow
+- Maintenance requests with staff assignment and issue photos
+- Notifications, audit logging, reports, and export support
 
-## Cai dat va chay du an
+## Tech Stack
 
-### 1. Cai dependencies
+- **Backend:** Node.js, Express, SQLite, JWT, Jest
+- **Frontend:** React, Vite, React Router, Axios, Recharts
+- **Tooling:** Docker Compose, ESLint, npm workspaces-style root scripts
+
+## Requirements
+
+- Node.js 20.17 or newer
+- npm 9 or newer
+- Docker and Docker Compose, optional
+
+## Getting Started
+
+Install all project dependencies:
 
 ```bash
 npm install
-cd backend && npm install
-cd ../frontend && npm install
+npm run install:all
 ```
 
-### 2. Cau hinh backend env
+Create the backend environment file:
 
-Tao file `backend/.env` (co the copy tu `backend/.env.example`):
+```bash
+cp backend/.env.example backend/.env
+```
+
+Create the frontend environment file:
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+Update secrets in `backend/.env` before running the API:
 
 ```env
 PORT=5000
-JWT_SECRET=replace_with_a_long_random_secret
-JWT_REFRESH_SECRET=replace_with_another_long_random_secret
+NODE_ENV=development
+DB_PATH=./rental.db
+FRONTEND_URL=http://localhost:5173
+JWT_SECRET=replace_with_a_long_random_secret_at_least_32_chars
+JWT_REFRESH_SECRET=replace_with_another_long_random_secret_at_least_32_chars
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 ```
 
-Neu thieu `JWT_SECRET`, backend se khong khoi dong.
+Start the backend:
 
-### 2.1. Chay bang Docker Compose
+```bash
+npm run dev:backend
+```
+
+Start the frontend in another terminal:
+
+```bash
+npm run dev:frontend
+```
+
+Local URLs:
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:5000/api`
+- Health check: `http://localhost:5000/api/health`
+
+## Docker
+
+Run both services with Docker Compose:
 
 ```bash
 docker compose up --build
 ```
 
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:5000/api`
-- Health check: `http://localhost:5000/api/health`
+Docker Compose maps the frontend to `http://localhost:5173` and the backend to `http://localhost:5000/api`. SQLite data and uploaded files are stored in Docker volumes.
 
-### 3. Chay backend
+## Root Scripts
 
 ```bash
-cd backend
-npm start
+npm run install:all      # install backend and frontend dependencies
+npm run dev:backend      # run backend with nodemon
+npm run start:backend    # run backend with node
+npm run dev:frontend     # run Vite frontend
+npm run build:frontend   # build frontend for production
+npm run lint:frontend    # run frontend lint checks
+npm test                 # run backend tests
+npm run test:coverage    # run backend tests with coverage
 ```
 
-### 4. Chay frontend
+## Project Structure
 
-```bash
-cd frontend
-npm run dev
+```text
+.
+|-- backend/              # Express API, SQLite database setup, routes, services, tests
+|-- frontend/             # React/Vite application
+|-- docs/                 # Project documentation and quality materials
+|-- docker-compose.yml    # Local container orchestration
+|-- package.json          # Root scripts
+`-- vercel.json           # Frontend deployment configuration
 ```
 
-## Kiem thu
+## Documentation
 
-### Backend tests
+- `docs/SOFTWARE_SPECIFICATION.md` - functional, system, data, and interface specification
+- `docs/USER_GUIDE.md` - installation and usage guide
+- `docs/TESTING_AND_TOOLS.md` - testing approach and tools
+- `docs/TEAM_PROCESS.md` - collaboration process and feedback handling
+- `docs/QUALITY_CHECKLIST.md` - source code, runtime, and documentation checklist
 
-```bash
-npm test
-```
+## Database
 
-### Frontend lint/build
+The SQLite database is created and migrated by `backend/database.js`. By default, local development stores it at `backend/rental.db`; Docker stores it in a persistent volume at `/app/data/rental.db`.
 
-```bash
-npm run lint:frontend
-npm run build:frontend
-```
+Current tables:
 
-## Tai lieu bo sung
+- `users` - user profiles, roles, and authentication data
+- `rooms` - rental room information, pricing, capacity, and status
+- `lease_contracts` - tenant-room lease agreements
+- `meter_readings` - electricity and water readings by room
+- `invoices` - billing records, due dates, and payment status
+- `maintenance_requests` - tenant repair requests and staff handling
+- `refresh_tokens` - active refresh tokens for authentication
+- `revoked_access_tokens` - revoked access token blacklist entries
 
-- `docs/SOFTWARE_SPECIFICATION.md`: dac ta chuc nang, he thong, du lieu, giao dien.
-- `docs/USER_GUIDE.md`: huong dan cai dat va su dung.
-- `docs/TESTING_AND_TOOLS.md`: cac loai kiem thu va cong cu su dung.
-- `docs/TEAM_PROCESS.md`: quy trinh phoi hop va tiep nhan feedback.
-- `docs/QUALITY_CHECKLIST.md`: checklist chat luong source code, runtime, documentation.
+The backend keeps backward-compatible API keys where needed, such as older `id`, `name`, and `capacity` fields alongside newer keys like `userID`, `roomID`, `fullName`, and `maxOccupants`.
 
-## Cau truc co so du lieu hien tai
+## Deployment Notes
 
-Database duoc tao/duy tri tai `backend/database.js` va mac dinh luu o `backend/rental.db`.
+The frontend is configured for Vercel. Set `VITE_API_URL` to the deployed backend API URL.
 
-### 1) users
+The backend can run on Render or another Node.js host. If using SQLite in production, configure persistent storage and set `DB_PATH` accordingly. Render's default filesystem is ephemeral, so temporary SQLite storage is suitable only for demos and tests.
 
-Luu thong tin nguoi dung va xac thuc.
+## License
 
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
-| full_name | TEXT | Yes (default '') |  | Ho va ten |
-| phone_number | TEXT | Yes (default '') |  | So dien thoai |
-| name | TEXT | Yes |  | Truong tuong thich nguoc |
-| email | TEXT | Yes | UNIQUE | Email dang nhap |
-| password | TEXT | Yes |  | Mat khau da hash |
-| role | TEXT | Yes |  | Vai tro nguoi dung |
-| citizen_id | TEXT | No |  | CCCD |
-| permanent_address | TEXT | No |  | Dia chi thuong tru |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-
-### 2) rooms
-
-Quan ly thong tin phong.
-
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
-| name | TEXT | Yes |  | Ten phong |
-| description | TEXT | No |  | Mo ta |
-| category | TEXT | Yes (default 'Standard') |  | Loai phong |
-| price | REAL | Yes |  | Gia thue |
-| area | REAL | No |  | Dien tich |
-| max_occupants | INTEGER | Yes (default 1) |  | Suc chua toi da |
-| status | TEXT | Yes (default 'available') |  | Trang thai phong |
-| landlord_id | INTEGER | Yes | FK -> users.id | Chu phong |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
-
-### 3) lease_contracts
-
-Luu hop dong thue.
-
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
-| tenant_id | INTEGER | Yes | FK -> users.id | Nguoi thue |
-| room_id | INTEGER | Yes | FK -> rooms.id | Phong thue |
-| start_date | DATE | Yes |  | Ngay bat dau |
-| end_date | DATE | Yes |  | Ngay ket thuc |
-| deposit | REAL | Yes |  | Tien coc |
-| is_expired | INTEGER | Yes (default 0) |  | 0/1 het han |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
-
-### 4) meter_readings
-
-Luu chi so dien nuoc theo phong.
-
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
-| room_id | INTEGER | Yes | FK -> rooms.id | Phong |
-| electricity_index | REAL | Yes |  | Chi so dien |
-| water_index | REAL | Yes |  | Chi so nuoc |
-| recorded_date | DATE | Yes |  | Ngay ghi nhan |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-
-### 5) invoices
-
-Luu hoa don thanh toan.
-
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
-| room_id | INTEGER | Yes | FK -> rooms.id | Phong |
-| reading_id | INTEGER | No | FK -> meter_readings.id | Ban ghi chi so dien nuoc |
-| total_amount | REAL | Yes |  | Tong tien |
-| payment_status | TEXT | Yes (default 'Unpaid') |  | Trang thai thanh toan |
-| due_date | DATE | Yes |  | Han thanh toan |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
-
-### 6) maintenance_requests
-
-Luu yeu cau bao tri.
-
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
-| tenant_id | INTEGER | Yes | FK -> users.id | Nguoi bao cao |
-| staff_id | INTEGER | No | FK -> users.id | Nhan vien ky thuat |
-| description | TEXT | Yes |  | Mo ta su co |
-| issue_photo | TEXT | No |  | Anh/URL minh hoa |
-| priority | TEXT | Yes (default 'Medium') |  | Muc uu tien |
-| status | TEXT | Yes (default 'Pending') |  | Trang thai xu ly |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-| updated_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian cap nhat |
-
-### 7) refresh_tokens
-
-Luu refresh token dang hoat dong/phat sinh boi auth.
-
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | Yes | PK | Khoa chinh tang tu dong |
-| user_id | INTEGER | Yes | FK -> users.id | Chu token |
-| token_hash | TEXT | Yes | UNIQUE | Hash SHA-256 cua refresh token |
-| jti | TEXT | Yes | UNIQUE | JWT ID |
-| expires_at | DATETIME | Yes |  | Han token |
-| revoked | INTEGER | Yes (default 0) |  | 0/1 da revoke |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-| revoked_at | DATETIME | No |  | Thoi gian revoke |
-| replaced_by_jti | TEXT | No |  | JTI moi sau rotate |
-| last_used_at | DATETIME | No |  | Lan su dung cuoi |
-
-### 8) revoked_access_tokens
-
-Blacklist access token da logout/revoke.
-
-| Column | Type | Not Null | Key | Mo ta |
-| --- | --- | --- | --- | --- |
-| jti | TEXT | Yes | PK | JWT ID cua access token |
-| user_id | INTEGER | Yes | FK -> users.id | Chu token |
-| expires_at | DATETIME | Yes |  | Han token |
-| created_at | DATETIME | No (default CURRENT_TIMESTAMP) |  | Thoi gian tao |
-
-## Ghi chu tuong thich
-
-- He thong dang duoc thiet ke de tuong thich nguoc voi mot so key cu trong API response (vi du: `id`, `name`, `capacity`) trong khi da bo sung key moi (`userID`, `roomID`, `fullName`, `maxOccupants`).
-- Cac migration cot bo sung duoc xu ly tu dong trong `backend/database.js` bang `ensureColumn`.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
