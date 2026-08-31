@@ -17,12 +17,16 @@
 - JWT config is validated before backend starts.
 
 ## Documentation
-
-- `README.md`: install, run, test, and database schema.
-- `docs/SOFTWARE_SPECIFICATION.md`: functional, system, data, and interface specification.
-- `docs/USER_GUIDE.md`: setup and user workflows.
-- `docs/TESTING_AND_TOOLS.md`: test types and commands.
-- `docs/TEAM_PROCESS.md`: coordination and feedback workflow.
+ 
+ - `README.md`: install, run, test, and database schema.
+ - `docs/SOFTWARE_SPECIFICATION.md`: functional, system, data, and interface specification.
+ - `docs/USER_GUIDE.md`: setup and user workflows.
+ - `docs/TESTING_AND_TOOLS.md`: test types and commands.
+ - `docs/TEAM_PROCESS.md`: coordination and feedback workflow.
++- `docs/SRS team 12 (Complete).docx` & `docs/Vision & Scope team 12 (Complete).docx`: requirements and scope.
++- `docs/Software Detailed Design.pdf` & `docs/Business Rules.pdf`: system architecture and rules.
++- `docs/TEST_CASE_SUITE_REPORT.pdf` & `docs/EVALUATION REPORT.pdf`: testing and evaluation reports.
++- `docs/SOFTWARE_DEVELOPMENT_PROCESS_AND_TASKSHEET.pdf` & Checklists: development tracking and reviews.
 
 ## Known Follow-Up Improvements
 

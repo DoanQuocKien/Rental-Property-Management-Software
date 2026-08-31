@@ -113,11 +113,30 @@ npm run test:coverage    # run backend tests with coverage
 
 ## Documentation
 
-- `docs/SOFTWARE_SPECIFICATION.md` - functional, system, data, and interface specification
-- `docs/USER_GUIDE.md` - installation and usage guide
-- `docs/TESTING_AND_TOOLS.md` - testing approach and tools
-- `docs/TEAM_PROCESS.md` - collaboration process and feedback handling
-- `docs/QUALITY_CHECKLIST.md` - source code, runtime, and documentation checklist
+### Core Guides & Summaries
+- [`docs/SOFTWARE_SPECIFICATION.md`](docs/SOFTWARE_SPECIFICATION.md) - Functional, system, data, and API interface specifications
+- [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) - User guide and setup instructions
+- [`docs/TESTING_AND_TOOLS.md`](docs/TESTING_AND_TOOLS.md) - Testing strategy, coverage scope, and toolchain
+- [`docs/TEAM_PROCESS.md`](docs/TEAM_PROCESS.md) - Team workflow, branch conventions, and feedback handling
+- [`docs/QUALITY_CHECKLIST.md`](docs/QUALITY_CHECKLIST.md) - Code quality and runtime verification checklist
+
+### Requirements & Design Specifications
+- [`docs/Vision & Scope team 12 (Complete).docx`](docs/Vision%20%26%20Scope%20team%2012%20(Complete).docx) - Project vision and scope definition
+- [`docs/SRS team 12 (Complete).docx`](docs/SRS%20team%2012%20(Complete).docx) - Comprehensive Software Requirements Specification (SRS)
+- [`docs/Use case Specification (Final) _ Team 12.docx`](docs/Use%20case%20Specification%20(Final)%20_%20Team%2012.docx) - Detailed use case specifications and actor flows
+- [`docs/Software Detailed Design.pdf`](docs/Software%20Detailed%20Design.pdf) - Architectural and detailed software design document
+- [`docs/Business Rules.pdf`](docs/Business%20Rules.pdf) - Core business logic and system rules
+- [`docs/Sorted Requirements Worksheet Mapping.xlsx`](docs/Sorted%20Requirements%20Worksheet%20Mapping.xlsx) - Requirements traceability and mapping matrix
+
+### QA, Testing & Evaluation
+- [`docs/TEST_CASE_SUITE_REPORT.pdf`](docs/TEST_CASE_SUITE_REPORT.pdf) - Detailed test case suite and execution report
+- [`docs/EVALUATION REPORT.pdf`](docs/EVALUATION%20REPORT.pdf) - Project evaluation and performance report
+- [`docs/TEAM CHECKLIST.pdf`](docs/TEAM%20CHECKLIST.pdf) - Team internal review and deliverable checklist
+- [`docs/ChecklistTeam12_Team13.xlsx`](docs/ChecklistTeam12_Team13.xlsx) - Cross-evaluation checklist (Team 12 - Team 13)
+- [`docs/Checklist_Team12_Team11.xlsx`](docs/Checklist_Team12_Team11.xlsx) - Cross-evaluation checklist (Team 12 - Team 11)
+
+### Process & Project Management
+- [`docs/SOFTWARE_DEVELOPMENT_PROCESS_AND_TASKSHEET.pdf`](docs/SOFTWARE_DEVELOPMENT_PROCESS_AND_TASKSHEET.pdf) - Software development process, sprint tasks, and responsibility assignments
 
 ## Database
 
