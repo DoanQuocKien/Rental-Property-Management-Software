@@ -159,7 +159,27 @@ The backend keeps backward-compatible API keys where needed, such as older `id`,
 
 The frontend is configured for Vercel. Set `VITE_API_URL` to the deployed backend API URL.
 
-The backend can run on Render or another Node.js host. If using SQLite in production, configure persistent storage and set `DB_PATH` accordingly. Render's default filesystem is ephemeral, so temporary SQLite storage is suitable only for demos and tests.
+## Research & Academic Citation
+
+This repository serves as the empirical testbed and benchmark artifact for **Case Study II** in the research paper:
+
+> **"Test Case Prioritization Based on Risk for Small Projects"**  
+> Doan Quoc Kien, Nguyen Khoi Nguyen, Tran Vinh Khang, Dang Vo Tuan Tai, and Nguyen Thi Thanh Truc  
+> *University of Information Technology, VNU-HCM*
+
+If you utilize this codebase, test suite, or requirements mapping in academic research, please cite it using [`CITATION.cff`](CITATION.cff) or the following BibTeX entry:
+
+```bibtex
+@inproceedings{kien2026testcase,
+  author    = {Doan Quoc Kien and Nguyen Khoi Nguyen and Tran Vinh Khang and Dang Vo Tuan Tai and Nguyen Thi Thanh Truc},
+  title     = {Test Case Prioritization Based on Risk for Small Projects},
+  year      = {2026},
+  institution = {University of Information Technology, VNU-HCM},
+  note      = {Artifact Repository: \url{https://github.com/DoanQuocKien/Rental-Property-Management-Software}}
+}
+```
+
+Detailed release notes and benchmark mappings are available in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
 
 ## License
 
